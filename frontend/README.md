@@ -14,7 +14,6 @@ The frontend is responsible for:
 
 ## Tech Stack
 - **Flutter** (Android / iOS)
-- **Dart**
 - **Firebase Auth (Google Sign-In)**
 - **REST API integration** (Backend)
 - **Local storage** (temporary caching)
