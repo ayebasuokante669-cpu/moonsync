@@ -15,6 +15,7 @@ The database is responsible for storing:
 
 ## Technology
 - **Supabase (PostgreSQL)**
+- **Firebase(Authentication)**
 - **Row Level Security (RLS)**
 - **UUID-based primary keys**
 - **Timestamp-based auditing**
