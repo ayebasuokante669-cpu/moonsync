@@ -134,3 +134,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+// frontend sync test
