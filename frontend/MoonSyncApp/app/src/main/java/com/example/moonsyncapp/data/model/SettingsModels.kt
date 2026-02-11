@@ -55,11 +55,19 @@ data class CycleSettings(
 )
 
 /**
+ * Widget display preferences
+ */
+data class WidgetSettings(
+    val showDetailedInfo: Boolean = false
+)
+
+/**
  * Complete settings state
  */
 data class AppSettings(
     val profile: UserProfile = UserProfile(),
     val notifications: NotificationSettings = NotificationSettings(),
     val appearance: AppearanceSettings = AppearanceSettings(),
-    val cycleSettings: CycleSettings = CycleSettings()
+    val cycleSettings: CycleSettings = CycleSettings(),
+    val widget: WidgetSettings = WidgetSettings()
 )

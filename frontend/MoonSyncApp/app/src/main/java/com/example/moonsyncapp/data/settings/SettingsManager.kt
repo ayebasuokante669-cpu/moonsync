@@ -40,7 +40,10 @@ data class UserSettings(
     val medicationReminderTime: LocalTime = LocalTime.of(8, 0),
 
     val dailyLogReminderEnabled: Boolean = false,
-    val dailyLogReminderTime: LocalTime = LocalTime.of(20, 0)
+    val dailyLogReminderTime: LocalTime = LocalTime.of(20, 0),
+
+    // Widget
+    val widgetShowDetailedInfo: Boolean = false
 )
 
 class SettingsManager(private val context: Context) {
@@ -74,6 +77,10 @@ class SettingsManager(private val context: Context) {
 
         private val TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm")
         private val DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE
+
+
+        private val WIDGET_SHOW_DETAILED = booleanPreferencesKey("widget_show_detailed_info")
+
     }
 
     private val dataStore = context.settingsDataStore
@@ -114,7 +121,9 @@ class SettingsManager(private val context: Context) {
             dailyLogReminderEnabled = prefs[DAILY_LOG_REMINDER_ENABLED] ?: false,
             dailyLogReminderTime = prefs[DAILY_LOG_REMINDER_TIME]?.let {
                 LocalTime.parse(it, TIME_FORMATTER)
-            } ?: LocalTime.of(20, 0)
+            } ?: LocalTime.of(20, 0),
+
+            widgetShowDetailedInfo = prefs[WIDGET_SHOW_DETAILED] ?: false
         )
     }
 
@@ -190,5 +199,21 @@ class SettingsManager(private val context: Context) {
     // Reset all settings
     suspend fun resetAllSettings() {
         dataStore.edit { it.clear() }
+    }
+
+    suspend fun saveWidgetShowDetailedInfo(showDetailedInfo: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[WIDGET_SHOW_DETAILED] = showDetailedInfo
+        }
+    }
+
+    /**
+     * Get widget detail preference.
+     *
+     * @return true if detailed info should be shown on widget
+     */
+    suspend fun getWidgetShowDetailedInfo(): Boolean {
+        val prefs = dataStore.data.first()
+        return prefs[WIDGET_SHOW_DETAILED] ?: false
     }
 }

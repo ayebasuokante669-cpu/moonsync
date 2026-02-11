@@ -27,10 +27,21 @@ import com.example.moonsyncapp.ui.components.SafeScreen
 import com.example.moonsyncapp.ui.theme.MoonSyncTheme
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.moonsyncapp.data.settings.SettingsManager
+import com.example.moonsyncapp.data.OnboardingManager
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CycleLengthScreen(navController: NavHostController) {
+    val context = LocalContext.current
+    val settingsManager = remember { SettingsManager(context) }
+    val onboardingManager = remember { OnboardingManager(context) }
+
+    val viewModel: SetupViewModel = viewModel(
+        factory = SetupViewModelFactory(settingsManager, onboardingManager, context)
+    )
     var isNavigating by remember { mutableStateOf(false) }
 
     // Cycle range from 14 to 60 days
@@ -189,6 +200,10 @@ fun CycleLengthScreen(navController: NavHostController) {
                 onClick = {
                     if (!isNavigating) {
                         isNavigating = true
+
+                        // ✅ SAVE CYCLE LENGTH TO SETTINGS
+                        viewModel.saveCycleLength(currentCycleLength)
+
                         navController.navigate(Routes.PERIOD_DURATION)
                     }
                 },

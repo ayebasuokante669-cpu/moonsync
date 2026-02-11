@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">MoonSyncApp</string>
+    <!-- Widget strings -->
+    <string name="widget_name_small">MoonSync Compact</string>
+    <string name="widget_name_medium">MoonSync Standard</string>
+    <string name="widget_name_large">MoonSync Dashboard</string>
+    <string name="widget_description_small">Quick cycle day view</string>
+    <string name="widget_description_medium">Cycle day with countdown</string>
+    <string name="widget_description_large">Full cycle dashboard</string>
 </resources>

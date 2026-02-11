@@ -9,14 +9,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
-// Create DataStore instance
 private val Context.authDataStore: DataStore<Preferences> by preferencesDataStore(
     name = "auth_preferences"
 )
 
 data class User(
     val email: String,
-    val token: String = "fake_token", // Will be replaced by backend
+    val token: String = "fake_token",
     val rememberMe: Boolean = true
 )
 
@@ -31,53 +30,45 @@ class AuthManager(private val context: Context) {
 
     private val dataStore = context.authDataStore
 
-    // Check if user is logged in
+    // ✅ FIX: Login state should persist regardless of "Remember Me"
+    // "Remember Me" only controls whether email is pre-filled, not login persistence
     val isLoggedIn: Flow<Boolean> = dataStore.data.map { preferences ->
-        val rememberMe = preferences[REMEMBER_ME] ?: false
-        val isLoggedIn = preferences[IS_LOGGED_IN] ?: false
-
-        // Only stay logged in if "Remember me" was checked
-        isLoggedIn && rememberMe
+        preferences[IS_LOGGED_IN] ?: false
     }
 
-    // Quick check for MainActivity
     suspend fun isUserLoggedIn(): Boolean {
         val prefs = dataStore.data.first()
-        val rememberMe = prefs[REMEMBER_ME] ?: false
-        val isLoggedIn = prefs[IS_LOGGED_IN] ?: false
-        return isLoggedIn && rememberMe
+        return prefs[IS_LOGGED_IN] ?: false
     }
 
     val currentUser: Flow<User?> = dataStore.data.map { preferences ->
         val isLoggedIn = preferences[IS_LOGGED_IN] ?: false
-        val rememberMe = preferences[REMEMBER_ME] ?: false
 
-        if (isLoggedIn && rememberMe) {
+        if (isLoggedIn) {
             User(
                 email = preferences[USER_EMAIL] ?: "",
                 token = preferences[AUTH_TOKEN] ?: "",
-                rememberMe = rememberMe
+                rememberMe = preferences[REMEMBER_ME] ?: false
             )
         } else {
             null
         }
     }
 
-    // Get saved email (for auto-fill)
+    // Get saved email (for auto-fill if Remember Me was checked)
     suspend fun getSavedEmail(): String? {
-        return dataStore.data.first()[USER_EMAIL]
+        val prefs = dataStore.data.first()
+        val rememberMe = prefs[REMEMBER_ME] ?: false
+        return if (rememberMe) prefs[USER_EMAIL] else null
     }
 
-    // FAKE Login - will be replaced with real API later
     suspend fun login(
         email: String,
         password: String,
         rememberMe: Boolean
     ): Result<User> {
-        // Simulate network delay
         delay(1000)
 
-        // Basic validation
         if (email.isEmpty()) {
             return Result.failure(Exception("Email is required"))
         }
@@ -94,20 +85,13 @@ class AuthManager(private val context: Context) {
             return Result.failure(Exception("Password must be at least 6 characters"))
         }
 
-        // FAKE SUCCESS - accept any valid email/password
-        // TODO: Replace with real backend call
-        /*
-        val response = apiService.login(email, password)
-        val user = User(email = response.email, token = response.token)
-        */
-
         val user = User(
             email = email,
             token = "fake_token_${System.currentTimeMillis()}",
             rememberMe = rememberMe
         )
 
-        // Save login state
+        // ✅ FIX: Always save login state (Remember Me only controls email auto-fill)
         dataStore.edit { preferences ->
             preferences[IS_LOGGED_IN] = true
             preferences[USER_EMAIL] = email
@@ -123,10 +107,8 @@ class AuthManager(private val context: Context) {
         password: String,
         confirmPassword: String
     ): Result<User> {
-        // Simulate network delay
         delay(1000)
 
-        // Validation
         if (email.isEmpty()) {
             return Result.failure(Exception("Email is required"))
         }
@@ -147,42 +129,34 @@ class AuthManager(private val context: Context) {
             return Result.failure(Exception("Passwords don't match"))
         }
 
-        // FAKE SUCCESS - create account
-        // TODO: Replace with real backend call
-        /*
-        val response = apiService.register(RegisterRequest(email, password))
-        val user = User(email = response.email, token = response.token)
-        */
-
         val user = User(
             email = email,
             token = "fake_token_${System.currentTimeMillis()}",
-            rememberMe = true // Auto remember after signup
+            rememberMe = true
         )
 
-        // Save login state (user is now logged in)
         dataStore.edit { preferences ->
             preferences[IS_LOGGED_IN] = true
             preferences[USER_EMAIL] = email
             preferences[AUTH_TOKEN] = user.token
-            preferences[REMEMBER_ME] = true // Auto-remember on signup
+            preferences[REMEMBER_ME] = true
         }
 
         return Result.success(user)
     }
 
-    // Logout
     suspend fun logout() {
         dataStore.edit { preferences ->
-            // Clear login state but keep email for convenience
             preferences[IS_LOGGED_IN] = false
             preferences[AUTH_TOKEN] = ""
-            // Keep email so it appears next time they login
-            // preferences[USER_EMAIL] stays
+            // Keep email if Remember Me was checked
+            val rememberMe = preferences[REMEMBER_ME] ?: false
+            if (!rememberMe) {
+                preferences[USER_EMAIL] = ""
+            }
         }
     }
 
-    // Clear all data (complete sign out)
     suspend fun clearAllData() {
         dataStore.edit { preferences ->
             preferences.clear()

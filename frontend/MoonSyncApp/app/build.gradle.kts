@@ -94,4 +94,17 @@ dependencies {
     implementation("io.coil-kt:coil-compose:2.5.0")
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
+
+    // =============================================
+    // NEW: Widget dependencies (Jetpack Glance)
+    // =============================================
+
+    // Glance for app widgets
+    implementation("androidx.glance:glance-appwidget:1.1.0")
+
+    // Glance Material 3 theming support
+    implementation("androidx.glance:glance-material3:1.1.0")
+
+    // WorkManager for background widget refresh
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 }

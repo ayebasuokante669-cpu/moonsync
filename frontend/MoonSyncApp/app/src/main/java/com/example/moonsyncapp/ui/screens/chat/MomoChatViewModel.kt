@@ -26,7 +26,8 @@ data class ChatMessage(
     val author: ChatAuthor,
     val createdAt: Instant = Instant.now(),
     val text: String? = null,
-    val attachments: List<ChatAttachment> = emptyList()
+    val attachments: List<ChatAttachment> = emptyList(),
+    val hasCurrentUserReported: Boolean = false
 )
 
 data class ChatUiState(
@@ -60,6 +61,9 @@ class MomoChatViewModel : ViewModel() {
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     private var recordingJob: Job? = null
+
+    // Track reported message IDs for duplicate prevention
+    private val _reportedMessageIds = MutableStateFlow<Set<String>>(emptySet())
 
     fun onInputChange(text: String) {
         _uiState.update { it.copy(input = text) }
@@ -187,16 +191,19 @@ class MomoChatViewModel : ViewModel() {
 
     fun reportMomoMessage(messageId: String, reason: ReportReason, notes: String?) {
         viewModelScope.launch {
-            // Frontend stub: In production, this would call a backend API
-            // For now, just log the report and dismiss
+            // Check if already reported
+            if (messageId in _reportedMessageIds.value) {
+                // Already reported, just dismiss sheet
+                _uiState.update { it.copy(reportTargetMessage = null) }
+                return@launch
+            }
 
-            // Example: Find the message and mark it as reported (optional visual feedback)
+            // Mark message as reported
             _uiState.update { state ->
                 state.copy(
                     messages = state.messages.map { msg ->
                         if (msg.id == messageId) {
-                            // Could add a `isReported` field to ChatMessage later
-                            msg
+                            msg.copy(hasCurrentUserReported = true)
                         } else {
                             msg
                         }
@@ -205,8 +212,15 @@ class MomoChatViewModel : ViewModel() {
                 )
             }
 
+            // Track reported message ID
+            _reportedMessageIds.update { it + messageId }
+
             // TODO: Backend integration
             // api.reportAiMessage(messageId, reason, notes)
+
+            // Note: We DON'T hide Momo messages after reporting
+            // This is AI feedback, not content moderation
+            // Just track the report for analytics/improvement
         }
     }
 }
