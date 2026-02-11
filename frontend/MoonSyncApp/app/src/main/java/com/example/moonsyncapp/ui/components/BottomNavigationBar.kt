@@ -61,10 +61,10 @@ fun BottomNavigationBar(
                 navController.navigate(route) {
                     popUpTo(Routes.HOME) {
                         inclusive = false
-                        saveState = true
+                        saveState = false
                     }
                     launchSingleTop = true
-                    restoreState = true
+                    restoreState = false
                 }
             }
         },

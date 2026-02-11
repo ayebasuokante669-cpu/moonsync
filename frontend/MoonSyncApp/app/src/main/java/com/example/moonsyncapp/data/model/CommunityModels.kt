@@ -71,6 +71,8 @@ data class CommunityPost(
     val isPromotedToArticle: Boolean = false,
     val reportCount: Int = 0,
     val isFlagged: Boolean = false,
+    val hasCurrentUserReported: Boolean = false,
+    val isAutoHidden: Boolean = false,
     val groupId: String? = null,
     val localCircle: String? = null
 )
@@ -131,7 +133,9 @@ data class PostComment(
     val reactions: List<PostReaction> = emptyList(),
     val isVerifiedProfessional: Boolean = false,
     val isAnonymous: Boolean = false,
-    val reportCount: Int = 0
+    val reportCount: Int = 0,
+    val hasCurrentUserReported: Boolean = false,
+    val isAutoHidden: Boolean = false
 )
 
 // ==========================================
@@ -191,7 +195,9 @@ data class PhaseRoomMessage(
     val timestamp: LocalDateTime,
     val isAnonymous: Boolean = true,  // Default to anonymous
     val reportCount: Int = 0,
-    val isHidden: Boolean = false
+    val isHidden: Boolean = false,
+    val hasCurrentUserReported: Boolean = false,
+    val isAutoHidden: Boolean = false
 )
 
 // ==========================================

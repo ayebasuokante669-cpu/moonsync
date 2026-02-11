@@ -22,9 +22,21 @@ import androidx.navigation.compose.rememberNavController
 import com.example.moonsyncapp.navigation.Routes
 import com.example.moonsyncapp.ui.theme.MoonSyncTheme
 import kotlinx.coroutines.delay
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.moonsyncapp.data.settings.SettingsManager
+import com.example.moonsyncapp.data.OnboardingManager
 
 @Composable
 fun SetupCompleteScreen(navController: NavHostController) {
+    val context = LocalContext.current
+    val settingsManager = remember { SettingsManager(context) }
+    val onboardingManager = remember { OnboardingManager(context) }
+
+    val viewModel: SetupViewModel = viewModel(
+        factory = SetupViewModelFactory(settingsManager, onboardingManager, context)
+    )
+
     var showContent by remember { mutableStateOf(false) }
     var isNavigating by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
@@ -159,6 +171,10 @@ fun SetupCompleteScreen(navController: NavHostController) {
                 onClick = {
                     if (!isNavigating) {
                         isNavigating = true
+
+                        // ✅ CRITICAL: Mark setup complete + refresh widget
+                        viewModel.completeSetup()
+
                         navController.navigate(Routes.HOME) {
                             popUpTo(Routes.WELCOME) { inclusive = true }
                             launchSingleTop = true

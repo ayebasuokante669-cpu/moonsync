@@ -31,6 +31,60 @@
             android:name=".notifications.NotificationReceiver"
             android:exported="false" />
 
+        <!--
+              Small Widget Receiver (2×2)
+
+              Handles widget lifecycle for the compact widget.
+              Registered with widget_info_small metadata.
+          -->
+        <receiver
+            android:name=".widget.MoonSyncWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_name_small">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_small" />
+        </receiver>
+
+        <!--
+            Medium Widget Receiver (3×2)
+
+            Handles widget lifecycle for the standard widget.
+            Uses same receiver class with different metadata.
+        -->
+        <receiver
+            android:name=".widget.MoonSyncMediumWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_name_medium">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_medium" />
+        </receiver>
+
+        <!--
+            Large Widget Receiver (4×2)
+
+            Handles widget lifecycle for the dashboard widget.
+            Uses same receiver class with different metadata.
+        -->
+        <receiver
+            android:name=".widget.MoonSyncLargeWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_name_large">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_large" />
+        </receiver>
+
     </application>
 
 </manifest>

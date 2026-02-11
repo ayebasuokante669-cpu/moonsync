@@ -55,6 +55,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import androidx.compose.foundation.BorderStroke
 
 // ==========================================
 // COMMUNITY COLORS
@@ -1131,13 +1132,37 @@ private fun PostCard(
                         // Only show report option if not own post
                         if (post.author.id != currentUserId) {
                             DropdownMenuItem(
-                                text = { Text("Report") },
-                                onClick = {
-                                    showOptionsMenu = false
-                                    onReport()
+                                text = {
+                                    Text(
+                                        text = if (post.hasCurrentUserReported) "Reported ✓" else "Report",
+                                        color = if (post.hasCurrentUserReported) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        }
+                                    )
                                 },
+                                onClick = {
+                                    if (!post.hasCurrentUserReported) {
+                                        showOptionsMenu = false
+                                        onReport()
+                                    }
+                                },
+                                enabled = !post.hasCurrentUserReported,
                                 leadingIcon = {
-                                    Icon(Icons.Outlined.Flag, contentDescription = null)
+                                    Icon(
+                                        imageVector = Icons.Outlined.Flag,
+                                        contentDescription = if (post.hasCurrentUserReported) {
+                                            "Already reported"
+                                        } else {
+                                            "Report this post"
+                                        },
+                                        tint = if (post.hasCurrentUserReported) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        }
+                                    )
                                 }
                             )
                         }
@@ -1669,7 +1694,7 @@ private fun PhaseRoomTabContent(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(
-                        items = room.recentMessages.filter { !it.isHidden },
+                        items = room.recentMessages.filter { !it.isHidden && !it.isAutoHidden },
                         key = { it.id }
                     ) { message ->
                         PhaseRoomMessageItem(
@@ -1834,12 +1859,13 @@ private fun PhaseRoomMessageItem(
     isCurrentUser: Boolean,
     onLongPress: () -> Unit
 ) {
+    val hasReported = message.hasCurrentUserReported
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .then(
-                // Only allow reporting other users' messages, not your own
-                if (!isCurrentUser) {
+                // Only allow reporting other users' messages, not your own, and not already reported
+                if (!isCurrentUser && !hasReported) {
                     Modifier.pointerInput(Unit) {
                         detectTapGestures(
                             onLongPress = { onLongPress() }
@@ -1891,18 +1917,44 @@ private fun PhaseRoomMessageItem(
                     MaterialTheme.colorScheme.primary
                 } else {
                     MaterialTheme.colorScheme.surfaceVariant
-                }
+                },
+                border = if (hasReported && !isCurrentUser) {
+                    BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                } else null
             ) {
-                Text(
-                    text = message.content,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                    fontSize = 14.sp,
-                    color = if (isCurrentUser) {
-                        MaterialTheme.colorScheme.onPrimary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+                    Text(
+                        text = message.content,
+                        fontSize = 14.sp,
+                        color = if (isCurrentUser) {
+                            MaterialTheme.colorScheme.onPrimary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+
+                    // Show "Reported" indicator
+                    if (hasReported && !isCurrentUser) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(10.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Reported",
+                                fontSize = 9.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
-                )
+                }
             }
 
             Text(

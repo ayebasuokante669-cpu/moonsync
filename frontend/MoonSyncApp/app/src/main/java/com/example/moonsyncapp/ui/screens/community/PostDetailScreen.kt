@@ -42,6 +42,7 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import com.example.moonsyncapp.data.model.ContentType
 import com.example.moonsyncapp.data.model.ReportReason
+import androidx.compose.material.icons.filled.Check
 
 // Comment sorting options enum
 enum class CommentSortOption(val displayName: String) {
@@ -112,23 +113,25 @@ fun PostDetailScreen(
 
     // Sort comments based on selected option
     val sortedComments = remember(comments, sortOption) {
+        // First filter out auto-hidden comments (3+ reports)
+        val visibleComments = comments.filter { !it.isAutoHidden }
+
         when (sortOption) {
             CommentSortOption.MOST_HELPFUL ->
-                comments.sortedByDescending { comment ->
+                visibleComments.sortedByDescending { comment ->
                     comment.reactions.find { it.type == ReactionType.HELPFUL }?.count ?: 0
                 }
             CommentSortOption.PROFESSIONALS_FIRST ->
-                comments.sortedWith(
+                visibleComments.sortedWith(
                     compareByDescending<PostComment> { it.isVerifiedProfessional }
                         .thenByDescending { it.createdAt }
                 )
             CommentSortOption.NEWEST ->
-                comments.sortedByDescending { it.createdAt }
+                visibleComments.sortedByDescending { it.createdAt }
             CommentSortOption.OLDEST ->
-                comments.sortedBy { it.createdAt }
+                visibleComments.sortedBy { it.createdAt }
         }
     }
-
     // Report sheet for comments
     reportCommentTarget?.let { comment ->
         CommunityReportSheet(
@@ -680,6 +683,34 @@ private fun CommentItem(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
+                        // Show "You reported this" indicator
+                        if (comment.hasCurrentUserReported) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "You reported this",
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
                         // Reaction summary (if any)
                         if (comment.reactions.any { it.count > 0 }) {
                             Row(
@@ -789,16 +820,45 @@ private fun CommentItem(
                                 }
                             )
                         }
-                        DropdownMenuItem(
-                            text = { Text("Report", fontSize = 14.sp) },
-                            onClick = {
-                                showOptionsMenu = false
-                                onReport()
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Outlined.Flag, contentDescription = null)
-                            }
-                        )
+
+                        // Only show report option if not own comment
+                        if (comment.author.id != currentUserId) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = if (comment.hasCurrentUserReported) "Reported ✓" else "Report",
+                                        fontSize = 14.sp,
+                                        color = if (comment.hasCurrentUserReported) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        }
+                                    )
+                                },
+                                onClick = {
+                                    if (!comment.hasCurrentUserReported) {
+                                        showOptionsMenu = false
+                                        onReport()
+                                    }
+                                },
+                                enabled = !comment.hasCurrentUserReported,
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Flag,
+                                        contentDescription = if (comment.hasCurrentUserReported) {
+                                            "Already reported"
+                                        } else {
+                                            "Report comment"
+                                        },
+                                        tint = if (comment.hasCurrentUserReported) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        }
+                                    )
+                                }
+                            )
+                        }
                     }
                 }
             }

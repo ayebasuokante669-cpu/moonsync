@@ -13,6 +13,7 @@ import java.time.LocalDateTime
 import java.time.YearMonth
 import java.time.temporal.ChronoUnit
 import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.flow.update
 
 class CommunityViewModel : ViewModel() {
 
@@ -73,6 +74,11 @@ class CommunityViewModel : ViewModel() {
 
     private val _selectedPhaseFilter = MutableStateFlow<CyclePhase?>(null)
     val selectedPhaseFilter: StateFlow<CyclePhase?> = _selectedPhaseFilter.asStateFlow()
+
+    // Hidden content tracking (for personal hide after reporting)
+    private val _hiddenPostIds = MutableStateFlow<Set<String>>(emptySet())
+    private val _hiddenCommentIds = MutableStateFlow<Set<String>>(emptySet())
+    private val _hiddenMessageIds = MutableStateFlow<Set<String>>(emptySet())
 
     // ==========================================
     // PHASE ROOM STATE
@@ -187,6 +193,12 @@ class CommunityViewModel : ViewModel() {
 
     fun getFilteredPosts(): List<CommunityPost> {
         var filtered = _posts.value
+
+        // Filter out auto-hidden posts (hidden for everyone)
+        filtered = filtered.filter { !it.isAutoHidden }
+
+        // Filter out posts hidden by current user (personal hide after reporting)
+        filtered = filtered.filter { it.id !in _hiddenPostIds.value }
 
         _selectedPostCategory.value?.let { category ->
             filtered = filtered.filter { it.category == category }
@@ -321,31 +333,65 @@ class CommunityViewModel : ViewModel() {
         viewModelScope.launch {
             _posts.value = _posts.value.map { post ->
                 if (post.id == postId) {
+                    // Check if already reported by current user
+                    if (post.hasCurrentUserReported) {
+                        return@map post  // Already reported, no changes
+                    }
+
+                    val newCount = post.reportCount + 1
                     post.copy(
-                        reportCount = post.reportCount + 1,
-                        isFlagged = post.reportCount >= 2
+                        reportCount = newCount,
+                        isFlagged = newCount >= 2,
+                        isAutoHidden = newCount >= 5,  // Auto-hide threshold for posts
+                        hasCurrentUserReported = true
                     )
                 } else {
                     post
                 }
             }
+
+            // Hide post for this user (personal hide)
+            _hiddenPostIds.update { it + postId }
+
             refreshFilteredPosts()
+
+            // TODO: Backend integration
+            // api.reportPost(postId, reason, notes)
         }
+    }
+
+    // ==========================================
+    // HIDE/UNHIDE ACTIONS (Optional Undo)
+    // ==========================================
+
+    fun unhidePost(postId: String) {
+        _hiddenPostIds.update { it - postId }
+        refreshFilteredPosts()
+    }
+
+    fun unhideComment(commentId: String) {
+        _hiddenCommentIds.update { it - commentId }
+    }
+
+    fun unhideMessage(messageId: String) {
+        _hiddenMessageIds.update { it - messageId }
     }
 
     fun reportComment(commentId: String, reason: ReportReason, notes: String?) {
         viewModelScope.launch {
-            // Frontend stub: Increment comment report count
-            // In production, this would call backend API and potentially hide/flag the comment
-
             _posts.value = _posts.value.map { post ->
                 val updatedComments = post.comments.map { comment ->
                     if (comment.id == commentId) {
-                        val newReportCount = comment.reportCount + 1
+                        // Check if already reported by current user
+                        if (comment.hasCurrentUserReported) {
+                            return@map comment  // Already reported, no changes
+                        }
+
+                        val newCount = comment.reportCount + 1
                         comment.copy(
-                            reportCount = newReportCount
-                            // Could add auto-hide logic here:
-                            // isHidden = newReportCount >= 3
+                            reportCount = newCount,
+                            isAutoHidden = newCount >= 3,  // Auto-hide threshold for comments
+                            hasCurrentUserReported = true
                         )
                     } else {
                         comment
@@ -359,6 +405,9 @@ class CommunityViewModel : ViewModel() {
                     post
                 }
             }
+
+            // Hide comment for this user (personal hide)
+            _hiddenCommentIds.update { it + commentId }
 
             refreshFilteredPosts()
 
@@ -407,10 +456,17 @@ class CommunityViewModel : ViewModel() {
 
             val updatedMessages = currentRoom.recentMessages.map { message ->
                 if (message.id == messageId) {
-                    val newReportCount = message.reportCount + 1
+                    // Check if already reported by current user
+                    if (message.hasCurrentUserReported) {
+                        return@map message  // Already reported, no changes
+                    }
+
+                    val newCount = message.reportCount + 1
                     message.copy(
-                        reportCount = newReportCount,
-                        isHidden = newReportCount >= 3 // Auto-hide after 3 reports
+                        reportCount = newCount,
+                        isHidden = newCount >= 3,  // Keep existing behavior
+                        isAutoHidden = newCount >= 3,  // Auto-hide threshold for messages
+                        hasCurrentUserReported = true
                     )
                 } else {
                     message
@@ -422,6 +478,12 @@ class CommunityViewModel : ViewModel() {
             _phaseRooms.value = _phaseRooms.value.map {
                 if (it.phase == currentRoom.phase) updatedRoom else it
             }
+
+            // Hide message for this user (personal hide)
+            _hiddenMessageIds.update { it + messageId }
+
+            // TODO: Backend integration
+            // api.reportPhaseRoomMessage(messageId, reason, notes)
         }
     }
 

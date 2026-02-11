@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.time.LocalDate
 import java.time.LocalTime
+import com.example.moonsyncapp.widget.WidgetRefreshHelper
 
 // Navigation events
 sealed class SettingsNavigationEvent {
@@ -39,13 +40,15 @@ data class SettingsUiState(
     val showPeriodEndTimePicker: Boolean = false,
     val showMedicationTimePicker: Boolean = false,
     val showDailyLogTimePicker: Boolean = false,
-    // New: Cycle settings dialogs
+    // Cycle settings dialogs
     val showCycleLengthDialog: Boolean = false,
     val showPeriodDurationDialog: Boolean = false,
     val showLastPeriodDatePicker: Boolean = false,
     val editCycleLengthInput: Int = 28,
     val editPeriodDurationInput: Int = 5,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    // Widget
+    val showLockScreenInfo: Boolean = false
 )
 
 class SettingsViewModel(
@@ -111,6 +114,9 @@ class SettingsViewModel(
                                 medicationReminderTime = userSettings.medicationReminderTime,
                                 dailyLogReminderEnabled = userSettings.dailyLogReminderEnabled,
                                 dailyLogReminderTime = userSettings.dailyLogReminderTime
+                            ),
+                            widget = WidgetSettings(
+                                showDetailedInfo = userSettings.widgetShowDetailedInfo
                             )
                         )
                     )
@@ -561,6 +567,9 @@ class SettingsViewModel(
                     showCycleLengthDialog = false
                 )
             }
+
+            // Refresh widget after cycle length change
+            context?.let { WidgetRefreshHelper.refreshNow(it) }
         }
     }
 
@@ -595,6 +604,9 @@ class SettingsViewModel(
                     showPeriodDurationDialog = false
                 )
             }
+
+            //Refresh widget after period duration change
+            context?.let { WidgetRefreshHelper.refreshNow(it) }
         }
     }
 
@@ -619,6 +631,9 @@ class SettingsViewModel(
                     showLastPeriodDatePicker = false
                 )
             }
+
+            // Refresh widget after period date change
+            context?.let { WidgetRefreshHelper.refreshNow(it) }
         }
     }
 
@@ -641,6 +656,12 @@ class SettingsViewModel(
 
             // Cancel all notifications
             notificationHelper?.cancelAllNotifications()
+
+            // NEW: Clear widget data and cancel worker
+            context?.let {
+                WidgetRefreshHelper.clearAndReset(it)
+                WidgetRefreshHelper.cancelAll(it)
+            }
 
             // Navigate to setup screen
             _navigationEvent.emit(SettingsNavigationEvent.NavigateToSetup)
@@ -666,6 +687,13 @@ class SettingsViewModel(
 
             // Cancel all notifications
             notificationHelper?.cancelAllNotifications()
+
+            // Clear widget data and cancel worker
+            context?.let {
+                WidgetRefreshHelper.clearAndReset(it)
+                WidgetRefreshHelper.cancelAll(it)
+            }
+
 
             // Navigate to login
             _navigationEvent.emit(SettingsNavigationEvent.NavigateToLogin)
@@ -697,6 +725,10 @@ class SettingsViewModel(
             context?.let { ctx ->
                 val file = File(ctx.filesDir, "profile_photo.jpg")
                 if (file.exists()) file.delete()
+
+                // Clear widget data and cancel worker
+                WidgetRefreshHelper.clearAndReset(ctx)
+                WidgetRefreshHelper.cancelAll(ctx)
             }
 
             // TODO: Call backend to delete account when ready
@@ -753,6 +785,52 @@ class SettingsViewModel(
             _navigationEvent.emit(
                 SettingsNavigationEvent.OpenUrl(
                     "https://play.google.com/store/apps/details?id=com.example.moonsyncapp"
+                )
+            )
+        }
+    }
+
+    // ==================== WIDGET SETTINGS ====================
+
+    /**
+     * Toggle widget detailed info display.
+     * Updates both settings and widget immediately.
+     */
+    fun toggleWidgetDetailedInfo(enabled: Boolean) {
+        viewModelScope.launch {
+            // Save preference
+            settingsManager?.saveWidgetShowDetailedInfo(enabled)
+
+            // Update UI state
+            _uiState.update { state ->
+                state.copy(
+                    settings = state.settings.copy(
+                        widget = state.settings.widget.copy(
+                            showDetailedInfo = enabled
+                        )
+                    )
+                )
+            }
+
+            // Refresh widget with new privacy setting
+            context?.let { ctx ->
+                WidgetRefreshHelper.refreshWithPrivacy(ctx, enabled)
+            }
+        }
+    }
+
+    /**
+     * Show lock screen privacy info dialog.
+     */
+    fun showLockScreenPrivacyInfo() {
+        viewModelScope.launch {
+            _navigationEvent.emit(
+                SettingsNavigationEvent.ShowMessage(
+                    "💡 Privacy Tip\n\n" +
+                            "Your widget may appear on the lock screen depending on " +
+                            "your device settings.\n\n" +
+                            "To control this:\n" +
+                            "Settings → Display → Lock screen → Widgets"
                 )
             )
         }

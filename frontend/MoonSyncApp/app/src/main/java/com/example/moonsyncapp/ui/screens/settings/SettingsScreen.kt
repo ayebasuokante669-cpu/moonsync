@@ -53,6 +53,8 @@ import com.example.moonsyncapp.ui.theme.ThemeManager
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import androidx.compose.material.icons.outlined.Timeline
+import androidx.compose.material.icons.outlined.Widgets
+import androidx.compose.material.icons.outlined.Lock
 
 @Composable
 fun SettingsScreen(
@@ -281,7 +283,6 @@ fun SettingsScreen(
     }
 
     // ==================== MAIN UI ====================
-
     SettingsContent(
         ui = ui,
         currentRoute = currentRoute,
@@ -302,6 +303,7 @@ fun SettingsScreen(
         onShowMedicationTimePicker = viewModel::showMedicationTimePicker,
         onToggleDailyLogReminder = viewModel::toggleDailyLogReminder,
         onShowDailyLogTimePicker = viewModel::showDailyLogTimePicker,
+        onToggleWidgetDetailedInfo = viewModel::toggleWidgetDetailedInfo,  // ← ADD THIS LINE
         onShowCycleLengthDialog = viewModel::showCycleLengthDialog,
         onShowPeriodDurationDialog = viewModel::showPeriodDurationDialog,
         onShowLastPeriodDatePicker = viewModel::showLastPeriodDatePicker,
@@ -347,6 +349,7 @@ private fun SettingsContent(
     onOpenAbout: () -> Unit,
     onOpenRateApp: () -> Unit,
     onShowLogoutDialog: () -> Unit,
+    onToggleWidgetDetailedInfo: (Boolean) -> Unit,
     onShowDeleteAccountDialog: () -> Unit
 ) {
     Box(
@@ -480,6 +483,56 @@ private fun SettingsContent(
                         onToggle = onToggleDailyLogReminder,
                         onTimeClick = onShowDailyLogTimePicker
                     )
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Widget section
+                SectionCard(title = "Widget", emoji = "📱") {
+                    ToggleSettingRow(
+                        icon = Icons.Outlined.Widgets, // You'll need to import this
+                        label = "Show detailed widget info",
+                        description = "Display phase names and countdown labels",
+                        isEnabled = ui.settings.widget.showDetailedInfo,
+                        onToggle = onToggleWidgetDetailedInfo
+                    )
+
+                    if (ui.settings.widget.showDetailedInfo) {
+                        Spacer(Modifier.height(12.dp))
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Lock,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = "Privacy tip",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = "Widget may appear on lock screen",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -1485,6 +1538,7 @@ private fun SettingsScreenPreview() {
             onShowMedicationTimePicker = {},
             onToggleDailyLogReminder = {},
             onShowDailyLogTimePicker = {},
+            onToggleWidgetDetailedInfo = {},  // ← CHANGE TO EMPTY LAMBDA
             onShowCycleLengthDialog = {},
             onShowPeriodDurationDialog = {},
             onShowLastPeriodDatePicker = {},
@@ -1527,6 +1581,7 @@ private fun SettingsScreenDarkPreview() {
             onShowCycleLengthDialog = {},
             onShowPeriodDurationDialog = {},
             onShowLastPeriodDatePicker = {},
+            onToggleWidgetDetailedInfo = {},
             onShowResetDataDialog = {},
             onOpenHelpSupport = {},
             onOpenPrivacyPolicy = {},

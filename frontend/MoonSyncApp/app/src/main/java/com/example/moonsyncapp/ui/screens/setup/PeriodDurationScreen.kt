@@ -26,10 +26,22 @@ import com.example.moonsyncapp.navigation.Routes
 import com.example.moonsyncapp.ui.theme.MoonSyncTheme
 import kotlinx.coroutines.launch
 import kotlin.math.absoluteValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.moonsyncapp.data.settings.SettingsManager
+import com.example.moonsyncapp.data.OnboardingManager
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PeriodDurationScreen(navController: NavHostController) {
+    val context = LocalContext.current
+    val settingsManager = remember { SettingsManager(context) }
+    val onboardingManager = remember { OnboardingManager(context) }
+
+    val viewModel: SetupViewModel = viewModel(
+        factory = SetupViewModelFactory(settingsManager, onboardingManager, context)
+    )
+
     var isNavigating by remember { mutableStateOf(false) }
 
     // Period range from 1 to 14 days
@@ -188,6 +200,10 @@ fun PeriodDurationScreen(navController: NavHostController) {
                 onClick = {
                     if (!isNavigating) {
                         isNavigating = true
+
+                        // ✅ SAVE PERIOD DURATION TO SETTINGS
+                        viewModel.savePeriodDuration(currentDuration)
+
                         navController.navigate(Routes.NOTIFICATIONS_SETUP)
                     }
                 },

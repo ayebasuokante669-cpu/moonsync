@@ -35,10 +35,22 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.moonsyncapp.data.settings.SettingsManager
+import com.example.moonsyncapp.data.OnboardingManager
+
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PeriodDateScreen(navController: NavHostController) {
+    val context = LocalContext.current
+    val settingsManager = remember { SettingsManager(context) }
+    val onboardingManager = remember { OnboardingManager(context) }
+
+    val viewModel: SetupViewModel = viewModel(
+        factory = SetupViewModelFactory(settingsManager, onboardingManager, context)
+    )
     var periodStartDate by remember { mutableStateOf<LocalDate?>(null) }
     var periodEndDate by remember { mutableStateOf<LocalDate?>(null) }
     var isNavigating by remember { mutableStateOf(false) }
@@ -255,12 +267,17 @@ fun PeriodDateScreen(navController: NavHostController) {
             // NEXT Button
             Button(
                 onClick = {
-                    if (!isNavigating) {
+                    if (!isNavigating && periodStartDate != null) {
                         isNavigating = true
+
+                        // ✅ SAVE TO SETTINGS MANAGER
+                        viewModel.savePeriodStartDate(periodStartDate!!)
+
+                        // Navigate to next screen
                         navController.navigate(Routes.CYCLE_LENGTH)
                     }
                 },
-                enabled = !isNavigating,
+                enabled = !isNavigating && periodStartDate != null,  // ✅ Only enable if date selected
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),

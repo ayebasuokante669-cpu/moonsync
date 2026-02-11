@@ -70,6 +70,8 @@ import com.example.moonsyncapp.data.model.ContentType
 import com.example.moonsyncapp.data.model.ReportReason
 import com.example.moonsyncapp.ui.screens.community.CommunityReportSheet
 import com.example.moonsyncapp.ui.screens.community.ReportContext
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.filled.Check
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -256,7 +258,7 @@ fun MomoChatScreen(
                         message = msg,
                         showMomoAvatar = showMomoAvatar,
                         showUserBadge = showUserBadge,
-                        onLongPress = if (msg.author == ChatAuthor.MOMO) {
+                        onLongPress = if (msg.author == ChatAuthor.MOMO && !msg.hasCurrentUserReported) {
                             { viewModel.setReportTarget(msg) }
                         } else null
                     )
@@ -346,6 +348,21 @@ private fun ChatMessageRow(
                             bottomEnd = if (isUser) 6.dp else 20.dp
                         )
                     )
+                    .then(
+                        // Add border if Momo message is reported
+                        if (!isUser && message.hasCurrentUserReported) {
+                            Modifier.border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                                shape = RoundedCornerShape(
+                                    topStart = 20.dp,
+                                    topEnd = 20.dp,
+                                    bottomStart = 6.dp,
+                                    bottomEnd = 20.dp
+                                )
+                            )
+                        } else Modifier
+                    )
                     .background(
                         if (isUser) {
                             Brush.linearGradient(
@@ -396,6 +413,28 @@ private fun ChatMessageRow(
                             else MaterialTheme.colorScheme.onSurface
                         )
                     }
+
+                    // Show "Reported" indicator for Momo messages
+                    if (!isUser && message.hasCurrentUserReported) {
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = "Feedback sent",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
                 }
             }
 
@@ -406,6 +445,7 @@ private fun ChatMessageRow(
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                 )
+
                 if (isUser && showUserBadge) {
                     Spacer(Modifier.width(6.dp))
                     Text(
@@ -413,6 +453,13 @@ private fun ChatMessageRow(
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                    )
+                } else if (!isUser && message.hasCurrentUserReported) {
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "• Reported",
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
                     )
                 }
             }

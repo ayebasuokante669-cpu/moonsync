@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.moonsyncapp.data.OnboardingManager
 import com.example.moonsyncapp.data.auth.AuthManager
@@ -21,16 +22,21 @@ import com.example.moonsyncapp.ui.screens.splash.SplashScreen
 import com.example.moonsyncapp.ui.theme.LocalThemeManager
 import com.example.moonsyncapp.ui.theme.MoonSyncTheme
 import com.example.moonsyncapp.ui.theme.ThemeManager
+import com.example.moonsyncapp.widget.WidgetRefreshHelper  // NEW: Widget refresh
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.mutableStateOf
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var themeManager: ThemeManager
     private lateinit var onboardingManager: OnboardingManager
     private lateinit var authManager: AuthManager
+
+    // Widget deep link — consumed once then cleared
+    private var pendingWidgetRoute: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.Theme_MoonSyncApp)
@@ -40,6 +46,16 @@ class MainActivity : ComponentActivity() {
         themeManager = ThemeManager(this)
         onboardingManager = OnboardingManager(this)
         authManager = AuthManager(this)
+
+        // =============================================
+        // NEW: Schedule widget midnight refresh worker
+        // Uses KEEP policy — safe to call every launch
+        // =============================================
+        WidgetRefreshHelper.ensureScheduled(this)
+
+        // Extract widget route ONCE, clear from intent immediately
+        pendingWidgetRoute = intent?.getStringExtra("route")
+        intent?.removeExtra("route")
 
         setContent {
             val systemTheme = isSystemInDarkTheme()
@@ -73,6 +89,17 @@ class MainActivity : ComponentActivity() {
                 }
 
                 isLoading = false  // ✅ IMPORTANT: Mark loading as done
+            }
+
+            // =============================================
+            // NEW: Refresh widget data on app open
+            // Syncs widget with any changes made since last open
+            // Only runs if widgets are placed on home screen
+            // =============================================
+            LaunchedEffect(isLoading) {
+                if (!isLoading) {
+                    WidgetRefreshHelper.refreshNow(this@MainActivity)
+                }
             }
 
             // Observe theme changes
@@ -122,6 +149,27 @@ class MainActivity : ComponentActivity() {
                         else -> {
                             // Show main navigation
                             val navController = rememberNavController()
+
+                            // Handle widget deep link — fires once, then clears
+                            LaunchedEffect(Unit) {
+                                pendingWidgetRoute?.let { route ->
+                                    kotlinx.coroutines.delay(100)
+                                    try {
+                                        navController.navigate(route) {
+                                            popUpTo(Routes.HOME) {
+                                                inclusive = false
+                                                saveState = false
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = false
+                                        }
+                                    } catch (e: Exception) {
+                                        e.printStackTrace()
+                                    }
+                                    pendingWidgetRoute = null
+                                }
+                            }
+
                             NavGraph(
                                 navController = navController,
                                 onboardingManager = onboardingManager,
@@ -133,5 +181,14 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    // =============================================
+    // NEW: Widget deep link handler
+    // Routes widget tap to the correct screen
+    //
+    // Widget tap actions:
+    // - Fresh widget → Routes.HOME
+    // - Stale widget → Routes.LOGGING
+    // - Log button (large widget) → Routes.LOGGING
+    // =============================================
 }
-// frontend sync test
