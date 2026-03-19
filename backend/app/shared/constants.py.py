@@ -1,0 +1,7 @@
+# app/shared/constants.py
+
+APP_NAME = "MoonSync"
+APP_VERSION = "1.0.0"
+
+DEFAULT_CYCLE_LENGTH = 28
+DEFAULT_PERIOD_LENGTH = 5
