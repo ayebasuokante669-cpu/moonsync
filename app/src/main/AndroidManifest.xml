@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Optional: camera hardware feature (not required, allows install on devices without camera) -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MoonSyncApp"
+        tools:targetApi="31">
+
+        <activity
+            android:name=".MainActivity"
+            android:theme="@style/Theme.MoonSyncApp.Splash"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- ADD: FileProvider for camera photos -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <receiver
+            android:name=".notifications.NotificationReceiver"
+            android:exported="false" />
+
+        <!--
+              Small Widget Receiver (2×2)
+
+              Handles widget lifecycle for the compact widget.
+              Registered with widget_info_small metadata.
+          -->
+        <receiver
+            android:name=".widget.MoonSyncWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_name_small">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_small" />
+        </receiver>
+
+        <!--
+            Medium Widget Receiver (3×2)
+
+            Handles widget lifecycle for the standard widget.
+            Uses same receiver class with different metadata.
+        -->
+        <receiver
+            android:name=".widget.MoonSyncMediumWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_name_medium">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_medium" />
+        </receiver>
+
+        <!--
+            Large Widget Receiver (4×2)
+
+            Handles widget lifecycle for the dashboard widget.
+            Uses same receiver class with different metadata.
+        -->
+        <receiver
+            android:name=".widget.MoonSyncLargeWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_name_large">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info_large" />
+        </receiver>
+
+    </application>
+
+</manifest>
