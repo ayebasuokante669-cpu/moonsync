@@ -12,7 +12,7 @@ from app.core.errors import (
     validation_exception_handler,
     generic_exception_handler,
 )
-from app.ml.safety_layer import handle_prompt
+from app.ai.safety import safety_check
 
 # Routers
 from app.cycle.router import router as cycle_router
