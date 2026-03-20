@@ -1,0 +1,327 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 16px;
+  
+  /* MoonSync Color System - Professional Health-Tech Palette */
+  --background: #ffffff;
+  --foreground: #1a1a2e;
+  
+  /* Soft lavender backgrounds */
+  --card: #ffffff;
+  --card-foreground: #1a1a2e;
+  --secondary-bg: #f6f4ff;
+  
+  /* Primary - Soft Lavender/Muted Purple */
+  --primary: #9b87e8;
+  --primary-foreground: #ffffff;
+  --primary-hover: #8a75db;
+  --primary-light: #e8e3fc;
+  
+  /* Secondary - Very Light Pink Accent */
+  --secondary: #fef3f8;
+  --secondary-foreground: #1a1a2e;
+  --secondary-accent: #fad4e5;
+  
+  /* Muted tones */
+  --muted: #f5f5f7;
+  --muted-foreground: #6b7280;
+  
+  /* State Colors - Soft and Calm */
+  --success: #86b896;
+  --success-foreground: #ffffff;
+  --success-light: #e8f5eb;
+  
+  --warning: #e6b17e;
+  --warning-foreground: #ffffff;
+  --warning-light: #fef3e8;
+  
+  --error: #e88b9d;
+  --error-foreground: #ffffff;
+  --error-light: #ffeef2;
+  
+  /* Neutral borders and inputs */
+  --border: #e5e7eb;
+  --input: #f3f4f6;
+  --input-border: #d1d5db;
+  --input-focus: #9b87e8;
+  
+  --ring: #9b87e8;
+  
+  /* Chart colors - Subtle and professional */
+  --chart-1: #9b87e8;
+  --chart-2: #b4a8e8;
+  --chart-3: #fad4e5;
+  --chart-4: #86b896;
+  --chart-5: #e6b17e;
+  
+  /* Sidebar */
+  --sidebar: #fafafa;
+  --sidebar-foreground: #1a1a2e;
+  --sidebar-primary: #9b87e8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f6f4ff;
+  --sidebar-accent-foreground: #1a1a2e;
+  --sidebar-border: #e5e7eb;
+  --sidebar-ring: #9b87e8;
+  
+  /* Border radius - 12px system */
+  --radius: 0.75rem;
+  
+  /* Typography scale */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  
+  /* Font weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  
+  /* Spacing (8px grid) */
+  --spacing-1: 0.5rem;
+  --spacing-2: 1rem;
+  --spacing-3: 1.5rem;
+  --spacing-4: 2rem;
+  --spacing-6: 3rem;
+  --spacing-8: 4rem;
+  
+  /* Shadows - Subtle floating shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 2px 8px 0 rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 4px 16px 0 rgba(0, 0, 0, 0.06);
+  --shadow-xl: 0 8px 24px 0 rgba(0, 0, 0, 0.08);
+}
+
+.dark {
+  /* Layout Surfaces */
+  --background: #0F172A;
+  --foreground: #F1F5F9;
+  
+  /* Layered Surfaces */
+  --card: #1E293B;
+  --card-foreground: #F1F5F9;
+  --secondary-bg: #1E293B;
+  
+  /* Branding & Primary */
+  --primary: #8a75db;
+  --primary-foreground: #ffffff;
+  --primary-hover: #9b87e8;
+  --primary-light: #273449; /* Elevated surface equivalent */
+  
+  /* Secondary Accent */
+  --secondary: #273449; /* Elevated surface equivalent */
+  --secondary-foreground: #CBD5F5;
+  --secondary-accent: #a33b6c;
+  
+  /* Muted Text */
+  --muted: #1E293B;
+  --muted-foreground: #94A3B8;
+  
+  /* State Colors */
+  --success: #22C55E;
+  --success-foreground: #ffffff;
+  --success-light: #163622;
+  
+  --warning: #e6b17e;
+  --warning-foreground: #ffffff;
+  --warning-light: #472b12;
+  
+  --error: #EF4444;
+  --error-foreground: #ffffff;
+  --error-light: #471922;
+  
+  /* Borders and Inputs */
+  --border: #334155;
+  --input: #1E293B;
+  --input-border: #334155;
+  --input-focus: #8a75db;
+  
+  --ring: #8a75db;
+  
+  --sidebar: #0F172A;
+  --sidebar-foreground: #F1F5F9;
+  --sidebar-primary: #8a75db;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1E293B;
+  --sidebar-accent-foreground: #CBD5F5;
+  --sidebar-border: #1E293B;
+  /* Shadows - Subtle border shadows instead of soft shadows to look natural in dark mode */
+  --shadow-sm: 0 0 0 1px #334155;
+  --shadow-md: 0 0 0 1px #334155;
+  --shadow-lg: 0 0 0 1px #334155;
+  --shadow-xl: 0 0 0 1px #334155;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-secondary-bg: var(--secondary-bg);
+  
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-light: var(--primary-light);
+  
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary-accent: var(--secondary-accent);
+  
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-light: var(--success-light);
+  
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-light: var(--warning-light);
+  
+  --color-error: var(--error);
+  --color-error-foreground: var(--error-foreground);
+  --color-error-light: var(--error-light);
+  
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-border: var(--input-border);
+  --color-input-focus: var(--input-focus);
+  
+  --color-ring: var(--ring);
+  
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
+  
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Typography Hierarchy - MoonSync Admin */
+  
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+    color: var(--foreground);
+  }
+
+  h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+    color: var(--foreground);
+  }
+
+  h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--foreground);
+  }
+
+  h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--foreground);
+  }
+
+  p {
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.6;
+    color: var(--foreground);
+  }
+
+  label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--foreground);
+  }
+
+  button {
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.5;
+  }
+
+  input, textarea, select {
+    font-size: 0.875rem;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  /* 
+   * Global Overrides for Rogue UI Injections 
+   * This overrides an implicit 'before:' white border found on active anchor tags in the Sidebar
+   * and implicit white backgrounds occasionally placed behind lucide icons inside Alert components
+   */
+  aside a::before {
+    display: none !important;
+    content: none !important;
+  }
+
+  .lucide {
+    background: transparent !important;
+  }
+}
+
+/* Custom utility classes for MoonSync */
+@layer utilities {
+  .shadow-soft {
+    box-shadow: var(--shadow-md);
+  }
+  
+  .shadow-soft-lg {
+    box-shadow: var(--shadow-lg);
+  }
+  
+  .transition-smooth {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .transition-premium {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .glass-effect {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
