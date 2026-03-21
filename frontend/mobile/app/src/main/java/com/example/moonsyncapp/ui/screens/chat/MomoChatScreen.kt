@@ -48,7 +48,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -72,6 +71,24 @@ import com.example.moonsyncapp.ui.screens.community.CommunityReportSheet
 import com.example.moonsyncapp.ui.screens.community.ReportContext
 import androidx.compose.foundation.border
 import androidx.compose.material.icons.filled.Check
+import android.Manifest
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import com.example.moonsyncapp.util.MediaHelper
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.material.icons.filled.Pause
+import com.example.moonsyncapp.util.AudioPlayer
+import com.example.moonsyncapp.util.PlaybackState
+import androidx.compose.ui.graphics.Color
+import coil.compose.AsyncImage
+import androidx.compose.ui.window.Dialog
+import androidx.compose.material.icons.filled.Pause
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,6 +111,59 @@ fun MomoChatScreen(
         }
     }
 
+    // ADD media handling:
+    val context = LocalContext.current
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+
+// Gallery picker
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            viewModel.attachImage(uri = uri, description = "Photo from gallery")
+        }
+    }
+
+// Camera capture
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success: Boolean ->
+        if (success && pendingCameraUri != null) {
+            viewModel.attachImage(uri = pendingCameraUri, description = "Camera photo")
+        }
+        pendingCameraUri = null
+    }
+
+// Camera permission
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            val uri = MediaHelper.createCameraImageUri(context)
+            pendingCameraUri = uri
+            cameraLauncher.launch(uri)
+        }
+    }
+
+// Audio permission
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            viewModel.startRealRecording(context)
+        }
+    }
+
+
+    val chatPlaybackState: PlaybackState by viewModel.audioPlayer.state.collectAsState()
+
+    LaunchedEffect(chatPlaybackState.isPlaying) {
+        while (chatPlaybackState.isPlaying) {
+            kotlinx.coroutines.delay(200L)
+            viewModel.audioPlayer.updatePosition()
+        }
+    }
+
     if (showAttachSheet) {
         ModalBottomSheet(
             onDismissRequest = { showAttachSheet = false },
@@ -109,34 +179,52 @@ fun MomoChatScreen(
                     .padding(bottom = 32.dp)
             ) {
                 Text(
-                    text = "Share with Momo 🌷",
+                    text = "Share with Cyra 🌷",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(Modifier.height(16.dp))
 
+                // Gallery option
                 AttachOptionRow(
                     icon = Icons.Outlined.AddPhotoAlternate,
-                    title = "Photo",
-                    subtitle = "Send an image to Momo",
-                    emoji = "📷",
+                    title = "Choose from Gallery",
+                    subtitle = "Select an existing photo",
+                    emoji = "🖼️",
                     onClick = {
-                        viewModel.attachImage(uri = null)
                         showAttachSheet = false
+                        galleryLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
                     }
                 )
 
                 Spacer(Modifier.height(8.dp))
 
+                // Camera option
+                AttachOptionRow(
+                    icon = Icons.Outlined.AddPhotoAlternate,
+                    title = "Take a Photo",
+                    subtitle = "Use your camera",
+                    emoji = "📸",
+                    onClick = {
+                        showAttachSheet = false
+                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                    }
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                // Voice note option
                 AttachOptionRow(
                     icon = Icons.Outlined.Mic,
                     title = "Voice note",
                     subtitle = "Record audio and send",
                     emoji = "🎙️",
                     onClick = {
-                        viewModel.attachAudio(uri = null, durationMs = 7_000L)
                         showAttachSheet = false
+                        audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                     }
                 )
             }
@@ -199,7 +287,7 @@ fun MomoChatScreen(
                         ) {
                             Image(
                                 painter = painterResource(id = R.drawable.momo),
-                                contentDescription = "Momo",
+                                contentDescription = "Cyra",
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
@@ -210,7 +298,7 @@ fun MomoChatScreen(
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Momo 🌸",
+                                text = "Cyra 🌸",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 17.sp,
                                 maxLines = 1,
@@ -260,7 +348,10 @@ fun MomoChatScreen(
                         showUserBadge = showUserBadge,
                         onLongPress = if (msg.author == ChatAuthor.MOMO && !msg.hasCurrentUserReported) {
                             { viewModel.setReportTarget(msg) }
-                        } else null
+                        } else null,
+                        audioPlayer = viewModel.audioPlayer,
+                        playbackState = chatPlaybackState,
+                        context = context
                     )
                 }
 
@@ -281,8 +372,13 @@ fun MomoChatScreen(
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     viewModel.send()
                 },
-                onMicPressStart = viewModel::startRecording,
-                onMicPressEnd = viewModel::stopRecordingAndStageAudio
+                onMicToggle = {
+                    if (ui.isRecording) {
+                        viewModel.stopRealRecording()
+                    } else {
+                        audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                },
             )
         }
     }
@@ -293,7 +389,10 @@ private fun ChatMessageRow(
     message: ChatMessage,
     showMomoAvatar: Boolean,
     showUserBadge: Boolean,
-    onLongPress: (() -> Unit)? = null
+    onLongPress: (() -> Unit)? = null,
+    audioPlayer: AudioPlayer? = null,
+    playbackState: PlaybackState? = null,
+    context: android.content.Context? = null
 ) {
     val isUser = message.author == ChatAuthor.USER
 
@@ -320,7 +419,7 @@ private fun ChatMessageRow(
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.momo),
-                        contentDescription = "Momo avatar",
+                        contentDescription = "Cyra avatar",
                         modifier = Modifier
                             .size(30.dp)
                             .clip(CircleShape)
@@ -395,7 +494,13 @@ private fun ChatMessageRow(
                     message.attachments.forEachIndexed { idx, att ->
                         when (att) {
                             is ChatAttachment.Image -> ImageAttachment(att)
-                            is ChatAttachment.Audio -> AudioAttachment(att)
+                            is ChatAttachment.Audio -> {
+                                if (audioPlayer != null && playbackState != null && context != null) {
+                                    AudioAttachment(att, audioPlayer, playbackState, context)
+                                } else {
+                                    AudioAttachment(att, AudioPlayer(), PlaybackState(), context ?: return@forEachIndexed)
+                                }
+                            }
                         }
                         if (idx != message.attachments.lastIndex) Spacer(Modifier.height(8.dp))
                     }
@@ -490,7 +595,7 @@ private fun TypingRow() {
         ) {
             Image(
                 painter = painterResource(id = R.drawable.momo),
-                contentDescription = "Momo avatar",
+                contentDescription = "Cyra avatar",
                 modifier = Modifier
                     .size(30.dp)
                     .clip(CircleShape)
@@ -509,7 +614,7 @@ private fun TypingRow() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Momo is thinking",
+                    text = "Cyra is thinking",
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
                     fontWeight = FontWeight.Medium
@@ -565,96 +670,178 @@ private fun DotPulse() {
     }
 }
 
+//@Composable
+//private fun ImageAttachment(att: ChatAttachment.Image) {
+//    Card(
+//        shape = RoundedCornerShape(14.dp),
+//        colors = CardDefaults.cardColors(
+//            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+//        )
+//    ) {
+//        Row(
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .heightIn(min = 92.dp)
+//                .padding(12.dp),
+//            verticalAlignment = Alignment.CenterVertically
+//        ) {
+//            Box(
+//                modifier = Modifier
+//                    .size(68.dp)
+//                    .clip(RoundedCornerShape(12.dp))
+//                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+//                contentAlignment = Alignment.Center
+//            ) {
+//                Icon(
+//                    imageVector = Icons.Outlined.AddPhotoAlternate,
+//                    contentDescription = null,
+//                    tint = MaterialTheme.colorScheme.primary
+//                )
+//            }
+//            Spacer(Modifier.width(12.dp))
+//            Column(modifier = Modifier.weight(1f)) {
+//                Text(
+//                    text = "Image 📷",
+//                    fontWeight = FontWeight.SemiBold,
+//                    color = MaterialTheme.colorScheme.onSurface
+//                )
+//                Text(
+//                    text = att.description,
+//                    fontSize = 12.sp,
+//                    color = MaterialTheme.colorScheme.onSurfaceVariant
+//                )
+//            }
+//        }
+//    }
+//}
 @Composable
 private fun ImageAttachment(att: ChatAttachment.Image) {
+    var isFullScreen by remember { mutableStateOf(false) }
+
+    if (isFullScreen && att.uri != null) {
+        Dialog(onDismissRequest = { isFullScreen = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black).clickable { isFullScreen = false }, contentAlignment = Alignment.Center) {
+                AsyncImage(model = att.uri, contentDescription = "Full screen", modifier = Modifier.fillMaxWidth().padding(16.dp), contentScale = ContentScale.Fit)
+            }
+        }
+    }
+
     Card(
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
+        modifier = Modifier.clickable(enabled = att.uri != null) { isFullScreen = true }
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 92.dp)
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(68.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.AddPhotoAlternate,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+        Column {
+            if (att.uri != null) {
+                AsyncImage(
+                    model = att.uri,
+                    contentDescription = "Image",
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp).clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp)),
+                    contentScale = ContentScale.Crop
                 )
             }
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Image 📷",
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = att.description,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.AddPhotoAlternate, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(if (att.uri != null) "Tap to view" else att.description, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
 }
+
+//@Composable
+//private fun AudioAttachment(att: ChatAttachment.Audio) {
+//    val seconds = (att.durationMs / 1000L).toInt().coerceAtLeast(1)
+//    Card(
+//        shape = RoundedCornerShape(14.dp),
+//        colors = CardDefaults.cardColors(
+//            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+//        )
+//    ) {
+//        Row(
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .padding(12.dp),
+//            verticalAlignment = Alignment.CenterVertically
+//        ) {
+//            Box(
+//                modifier = Modifier
+//                    .size(40.dp)
+//                    .clip(CircleShape)
+//                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
+//                contentAlignment = Alignment.Center
+//            ) {
+//                Icon(
+//                    imageVector = Icons.Filled.PlayArrow,
+//                    contentDescription = "Play audio",
+//                    tint = MaterialTheme.colorScheme.primary
+//                )
+//            }
+//            Spacer(Modifier.width(12.dp))
+//            Column(modifier = Modifier.weight(1f)) {
+//                Text(
+//                    text = "Voice note 🎙️",
+//                    fontWeight = FontWeight.SemiBold,
+//                    color = MaterialTheme.colorScheme.onSurface
+//                )
+//                Text(
+//                    text = "$seconds sec",
+//                    fontSize = 12.sp,
+//                    color = MaterialTheme.colorScheme.onSurfaceVariant
+//                )
+//            }
+//        }
+//    }
+//}
 
 @Composable
-private fun AudioAttachment(att: ChatAttachment.Audio) {
+private fun AudioAttachment(
+    att: ChatAttachment.Audio,
+    audioPlayer: AudioPlayer,
+    playbackState: PlaybackState,
+    context: android.content.Context
+) {
+    val fileId = att.uri?.toString() ?: att.durationMs.toString()
+    val isThisPlaying = playbackState.activeFileId == fileId
     val seconds = (att.durationMs / 1000L).toInt().coerceAtLeast(1)
+
     Card(
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = "Play audio",
-                    tint = MaterialTheme.colorScheme.primary
-                )
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(if (isThisPlaying && playbackState.isPlaying) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
+                        .clickable { att.uri?.let { audioPlayer.playOrPause(context, fileId, it.toString()) } },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isThisPlaying && playbackState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = "Play",
+                        tint = if (isThisPlaying && playbackState.isPlaying) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Voice note 🎙️", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                    Text("${seconds}s", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Voice note 🎙️",
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "$seconds sec",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            if (isThisPlaying) {
+                Spacer(Modifier.height(8.dp))
+                LinearProgressIndicator(
+                    progress = { playbackState.progress },
+                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
     }
 }
-
 @Composable
 private fun ChatComposer(
     input: String,
@@ -665,8 +852,7 @@ private fun ChatComposer(
     recordingMs: Long,
     onAttachClick: () -> Unit,
     onSend: () -> Unit,
-    onMicPressStart: () -> Unit,
-    onMicPressEnd: () -> Unit
+    onMicToggle: () -> Unit
 ) {
     Surface(
         tonalElevation = 2.dp,
@@ -713,7 +899,7 @@ private fun ChatComposer(
                     modifier = Modifier.weight(1f),
                     placeholder = {
                         Text(
-                            "Talk to Momo… 💬",
+                            "Talk to Cyra… 💬",
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )
                     },
@@ -735,22 +921,22 @@ private fun ChatComposer(
                     modifier = Modifier
                         .size(42.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f))
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onPress = {
-                                    onMicPressStart()
-                                    tryAwaitRelease()
-                                    onMicPressEnd()
-                                }
-                            )
-                        },
+                        .background(
+                            if (isRecording)
+                                MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
+                            else
+                                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f)
+                        )
+                        .clickable { onMicToggle() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Mic,
-                        contentDescription = "Hold to record",
-                        tint = MaterialTheme.colorScheme.tertiary,
+                        contentDescription = if (isRecording) "Stop recording" else "Start recording",
+                        tint = if (isRecording)
+                            MaterialTheme.colorScheme.error
+                        else
+                            MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -952,7 +1138,7 @@ private fun formatTime(instant: Instant): String {
 // ==========================================
 
 private fun buildMomoReportContext(message: ChatMessage): ReportContext {
-    val title = "Message from Momo"
+    val title = "Message from Cyra"
 
     // Meta: timestamp
     val meta = formatTime(message.createdAt)

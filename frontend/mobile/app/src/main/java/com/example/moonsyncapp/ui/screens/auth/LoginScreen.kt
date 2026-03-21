@@ -30,6 +30,9 @@ import com.example.moonsyncapp.data.auth.AuthManager
 import com.example.moonsyncapp.navigation.Routes
 import com.example.moonsyncapp.ui.theme.MoonSyncTheme
 import kotlinx.coroutines.launch
+import androidx.compose.ui.graphics.Color
+import com.example.moonsyncapp.data.auth.LoginLockoutException
+
 
 @Composable
 fun LoginScreen(navController: NavHostController) {
@@ -48,10 +51,41 @@ fun LoginScreen(navController: NavHostController) {
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    var isLockedOut by remember { mutableStateOf(false) }
+    var lockoutRemainingMs by remember { mutableStateOf(0L) }
+    var failedAttempts by remember { mutableStateOf(0) }
+
     // Pre-fill email if user logged in before
     LaunchedEffect(Unit) {
         authManager.getSavedEmail()?.let { savedEmail ->
             email = savedEmail
+        }
+    }
+
+    // Check lockout status on screen load
+    LaunchedEffect(Unit) {
+        val locked = authManager.isLockedOut()
+        if (locked) {
+            isLockedOut = true
+            lockoutRemainingMs = authManager.getRemainingLockoutMs()
+        }
+        failedAttempts = authManager.getFailedAttemptCount()
+    }
+
+// Countdown timer during lockout
+    LaunchedEffect(isLockedOut) {
+        if (isLockedOut) {
+            while (lockoutRemainingMs > 0) {
+                kotlinx.coroutines.delay(1000L)
+                lockoutRemainingMs -= 1000L
+
+                if (lockoutRemainingMs <= 0) {
+                    isLockedOut = false
+                    lockoutRemainingMs = 0L
+                    failedAttempts = 0
+                    errorMessage = null
+                }
+            }
         }
     }
 
@@ -132,7 +166,7 @@ fun LoginScreen(navController: NavHostController) {
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             singleLine = true,
-            enabled = !isLoading,
+            enabled = !isLoading && !isLockedOut,
             isError = errorMessage != null,
             visualTransformation = if (passwordVisible)
                 VisualTransformation.None else PasswordVisualTransformation(),
@@ -154,6 +188,84 @@ fun LoginScreen(navController: NavHostController) {
                 unfocusedBorderColor = MaterialTheme.colorScheme.outline
             )
         )
+        // Lockout banner with countdown
+        if (isLockedOut) {
+            Spacer(modifier = Modifier.height(12.dp))
+
+            val hours = (lockoutRemainingMs / 1000 / 60 / 60).toInt()
+            val minutes = ((lockoutRemainingMs / 1000 / 60) % 60).toInt()
+            val seconds = ((lockoutRemainingMs / 1000) % 60).toInt()
+            val countdownText = String.format("%d:%02d:%02d", hours, minutes, seconds)
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "🔒",
+                        fontSize = 32.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Account Temporarily Locked",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = "Too many failed login attempts",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Countdown timer
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.1f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "⏱️",
+                                fontSize = 16.sp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Try again in $countdownText",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "You can still reset your password below",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
 
         // Error message display
         if (errorMessage != null) {
@@ -191,13 +303,20 @@ fun LoginScreen(navController: NavHostController) {
             }
 
             TextButton(
-                onClick = { /* TODO: Forgot Password */ },
+                onClick = {
+                    navController.navigate(Routes.FORGOT_PASSWORD)
+                },
                 enabled = !isLoading
             ) {
                 Text(
-                    text = "Forgot Password?",
-                    color = MaterialTheme.colorScheme.primary,
-                    fontSize = 14.sp
+                    text = if (isLockedOut) "Reset Password →" else "Forgot Password?",
+                    color = if (isLockedOut) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
+                    fontSize = 14.sp,
+                    fontWeight = if (isLockedOut) FontWeight.Bold else FontWeight.Normal
                 )
             }
         }
@@ -206,22 +325,53 @@ fun LoginScreen(navController: NavHostController) {
 
         // Log In Button - UPDATED WITH AUTH LOGIC
         Button(
+//            onClick = {
+//                coroutineScope.launch {
+//                    isLoading = true
+//                    errorMessage = null
+//
+//                    // Call AuthManager to login
+//                    authManager.login(email, password, rememberMe)
+//                        .onSuccess { user ->
+//                            // Navigate to home on success
+//                            navController.navigate(Routes.HOME) {
+//                                popUpTo(Routes.LOGIN) { inclusive = true }
+//                            }
+//                        }
+//                        .onFailure { exception ->
+//                            // Show error message
+//                            errorMessage = exception.message
+//                        }
+//
+//                    isLoading = false
+//                }
+//            },
             onClick = {
                 coroutineScope.launch {
                     isLoading = true
                     errorMessage = null
 
-                    // Call AuthManager to login
                     authManager.login(email, password, rememberMe)
                         .onSuccess { user ->
-                            // Navigate to home on success
+                            isLockedOut = false
+                            failedAttempts = 0
                             navController.navigate(Routes.HOME) {
                                 popUpTo(Routes.LOGIN) { inclusive = true }
                             }
                         }
                         .onFailure { exception ->
-                            // Show error message
-                            errorMessage = exception.message
+                            when (exception) {
+                                is LoginLockoutException -> {
+                                    isLockedOut = true
+                                    lockoutRemainingMs = exception.remainingMs
+                                    errorMessage = exception.message
+                                }
+                                else -> {
+                                    errorMessage = exception.message
+                                    // Update failed attempt count
+                                    failedAttempts = authManager.getFailedAttemptCount()
+                                }
+                            }
                         }
 
                     isLoading = false
@@ -230,7 +380,7 @@ fun LoginScreen(navController: NavHostController) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
-            enabled = email.isNotEmpty() && password.isNotEmpty() && !isLoading,
+            enabled = email.isNotEmpty() && password.isNotEmpty() && !isLoading && !isLockedOut,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
                 disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
@@ -303,30 +453,71 @@ fun LoginScreen(navController: NavHostController) {
             }
 
             // Facebook
+//            OutlinedButton(
+//                onClick = { /* TODO: Facebook Login */ },
+//                modifier = Modifier
+//                    .weight(1f)
+//                    .height(52.dp),
+//                enabled = !isLoading,
+//                shape = RoundedCornerShape(16.dp),
+//                border = ButtonDefaults.outlinedButtonBorder.copy(
+//                    brush = SolidColor(
+//                        MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+//                    )
+//                ),
+//                colors = ButtonDefaults.outlinedButtonColors(
+//                    contentColor = MaterialTheme.colorScheme.onBackground
+//                )
+//            ) {
+//                Icon(
+//                    painter = painterResource(id = R.drawable.ic_facebook),
+//                    contentDescription = "Facebook",
+//                    modifier = Modifier.size(20.dp),
+//                    tint = androidx.compose.ui.graphics.Color.Unspecified
+//                )
+//                Spacer(modifier = Modifier.width(8.dp))
+//                Text(text = "Facebook", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+//            }
+
+//          Instagram (Coming Soon - requires backend OAuth)
             OutlinedButton(
-                onClick = { /* TODO: Facebook Login */ },
+                onClick = {
+                    // Instagram OAuth requires backend implementation
+                },
                 modifier = Modifier
                     .weight(1f)
                     .height(52.dp),
-                enabled = !isLoading,
+                enabled = false,
                 shape = RoundedCornerShape(16.dp),
                 border = ButtonDefaults.outlinedButtonBorder.copy(
                     brush = SolidColor(
-                        MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
                     )
                 ),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.onBackground
+                    disabledContainerColor = Color.Transparent,
+                    disabledContentColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                 )
             ) {
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_facebook),
-                    contentDescription = "Facebook",
+                    painter = painterResource(id = R.drawable.ic_instagram),
+                    contentDescription = "Instagram",
                     modifier = Modifier.size(20.dp),
-                    tint = androidx.compose.ui.graphics.Color.Unspecified
+                    tint = Color.Unspecified
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Facebook", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                Column {
+                    Text(
+                        text = "Instagram",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "Coming Soon",
+                        fontSize = 9.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
             }
         }
 
