@@ -45,6 +45,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.Snackbar
+import kotlinx.coroutines.launch
 
 // ==========================================
 // ARTICLE COLORS
@@ -103,6 +108,9 @@ fun ArticleDetailScreen(
     var isNavigating by remember { mutableStateOf(false) }
     var showShareSheet by remember { mutableStateOf(false) }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     // Calculate reading progress
     val scrollProgress = remember {
         derivedStateOf {
@@ -117,10 +125,24 @@ fun ArticleDetailScreen(
     }
 
     // Share bottom sheet
+//    if (showShareSheet && article != null) {
+//        ShareBottomSheet(
+//            article = article!!,
+//            onDismiss = { showShareSheet = false }
+//        )
+//    }
     if (showShareSheet && article != null) {
         ShareBottomSheet(
             article = article!!,
-            onDismiss = { showShareSheet = false }
+            onDismiss = { showShareSheet = false },
+            onShowComingSoon = { message ->
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = message,
+                        duration = SnackbarDuration.Short
+                    )
+                }
+            }
         )
     }
 
@@ -128,7 +150,7 @@ fun ArticleDetailScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .safeDrawingPadding()
+            .statusBarsPadding()
     ) {
         if (isLoading || article == null) {
             ArticleSkeletonLoading()
@@ -317,6 +339,20 @@ fun ArticleDetailScreen(
             color = MaterialTheme.colorScheme.primary,
             trackColor = Color.Transparent
         )
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 100.dp)
+        ) { snackbarData ->
+            Snackbar(
+                snackbarData = snackbarData,
+                shape = RoundedCornerShape(16.dp),
+                containerColor = MaterialTheme.colorScheme.inverseSurface,
+                contentColor = MaterialTheme.colorScheme.inverseOnSurface
+            )
+        }
     }
 }
 
@@ -532,7 +568,8 @@ private fun ArticleMetadata(
             text = article.description,
             fontSize = 16.sp,
             fontStyle = FontStyle.Italic,
-            color = ArticleColors.getReadingTextSecondary(),
+//            color = ArticleColors.getReadingTextSecondary(),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             lineHeight = 24.sp
         )
 
@@ -588,7 +625,8 @@ private fun ArticleContent(
                     Text(
                         text = paragraph,
                         fontSize = 17.sp,
-                        color = ArticleColors.getReadingTextPrimary(),
+//                        color = ArticleColors.getReadingTextPrimary(),
+                        color = MaterialTheme.colorScheme.onBackground,
                         lineHeight = 28.sp,
                         letterSpacing = 0.3.sp
                     )
@@ -624,7 +662,8 @@ private fun QuoteBlock(text: String) {
                 text = text,
                 fontSize = 16.sp,
                 fontStyle = FontStyle.Italic,
-                color = ArticleColors.getReadingTextPrimary(),
+//                color = ArticleColors.getReadingTextPrimary(),
+                color = MaterialTheme.colorScheme.onBackground,
                 lineHeight = 26.sp,
                 modifier = Modifier.weight(1f)
             )
@@ -646,7 +685,8 @@ private fun BulletPoint(text: String) {
         Text(
             text = text,
             fontSize = 17.sp,
-            color = ArticleColors.getReadingTextPrimary(),
+//            color = ArticleColors.getReadingTextPrimary(),
+            color = MaterialTheme.colorScheme.onBackground,
             lineHeight = 28.sp,
             modifier = Modifier.weight(1f)
         )
@@ -670,7 +710,8 @@ private fun NumberedPoint(text: String) {
             Text(
                 text = parts[1].trim(),
                 fontSize = 17.sp,
-                color = ArticleColors.getReadingTextPrimary(),
+//                color = ArticleColors.getReadingTextPrimary(),
+                color = MaterialTheme.colorScheme.onBackground,
                 lineHeight = 28.sp,
                 modifier = Modifier.weight(1f)
             )
@@ -678,7 +719,8 @@ private fun NumberedPoint(text: String) {
             Text(
                 text = text,
                 fontSize = 17.sp,
-                color = ArticleColors.getReadingTextPrimary(),
+//                color = ArticleColors.getReadingTextPrimary(),
+                color = MaterialTheme.colorScheme.onBackground,
                 lineHeight = 28.sp
             )
         }
@@ -896,7 +938,8 @@ private fun RelatedArticleCard(
 @Composable
 private fun ShareBottomSheet(
     article: HealthTip,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onShowComingSoon: (String) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState()
 
@@ -923,30 +966,59 @@ private fun ShareBottomSheet(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Share options
+//            ShareOption(
+//                icon = Icons.Outlined.Link,
+//                label = "Copy Link",
+//                onClick = {
+//                    // Copy link to clipboard
+//                    onDismiss()
+//                }
+//            )
+//
+//            ShareOption(
+//                icon = Icons.Outlined.Message,
+//                label = "Share to Community",
+//                onClick = {
+//                    // Share to community feed
+//                    onDismiss()
+//                }
+//            )
+//
+//            ShareOption(
+//                icon = Icons.Outlined.MoreHoriz,
+//                label = "More Options",
+//                onClick = {
+//                    // System share sheet
+//                    onDismiss()
+//                }
+//            )
             ShareOption(
                 icon = Icons.Outlined.Link,
                 label = "Copy Link",
+                comingSoon = true,  // ADD
                 onClick = {
-                    // Copy link to clipboard
                     onDismiss()
+                    onShowComingSoon("Link copying — Coming Soon ✨")
                 }
             )
 
             ShareOption(
                 icon = Icons.Outlined.Message,
                 label = "Share to Community",
+                comingSoon = true,  // ADD
                 onClick = {
-                    // Share to community feed
                     onDismiss()
+                    onShowComingSoon("Community sharing — Coming Soon ✨")
                 }
             )
 
             ShareOption(
                 icon = Icons.Outlined.MoreHoriz,
                 label = "More Options",
+                comingSoon = true,  // ADD
                 onClick = {
-                    // System share sheet
                     onDismiss()
+                    onShowComingSoon("More sharing options — Coming Soon ✨")
                 }
             )
         }
@@ -957,6 +1029,7 @@ private fun ShareBottomSheet(
 private fun ShareOption(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
+    comingSoon: Boolean = false,
     onClick: () -> Unit
 ) {
     Surface(
@@ -966,6 +1039,25 @@ private fun ShareOption(
             .clickable(onClick = onClick),
         color = Color.Transparent
     ) {
+//        Row(
+//            modifier = Modifier.padding(vertical = 16.dp, horizontal = 12.dp),
+//            verticalAlignment = Alignment.CenterVertically
+//        ) {
+//            Icon(
+//                imageVector = icon,
+//                contentDescription = null,
+//                tint = MaterialTheme.colorScheme.primary,
+//                modifier = Modifier.size(24.dp)
+//            )
+//
+//            Spacer(modifier = Modifier.width(16.dp))
+//
+//            Text(
+//                text = label,
+//                fontSize = 16.sp,
+//                color = MaterialTheme.colorScheme.onBackground
+//            )
+//        }
         Row(
             modifier = Modifier.padding(vertical = 16.dp, horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -973,7 +1065,11 @@ private fun ShareOption(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = if (comingSoon) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
                 modifier = Modifier.size(24.dp)
             )
 
@@ -982,8 +1078,29 @@ private fun ShareOption(
             Text(
                 text = label,
                 fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onBackground
+                color = if (comingSoon) {
+                    MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                } else {
+                    MaterialTheme.colorScheme.onBackground
+                },
+                modifier = Modifier.weight(1f)
             )
+
+            // Coming Soon badge
+            if (comingSoon) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                ) {
+                    Text(
+                        text = "Soon",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
         }
     }
 }

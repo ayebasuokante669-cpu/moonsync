@@ -56,25 +56,42 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import androidx.compose.foundation.BorderStroke
+import kotlinx.coroutines.launch
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.Snackbar
+import com.example.moonsyncapp.ui.theme.customColors
+import com.example.moonsyncapp.ui.theme.AccentPink
+import com.example.moonsyncapp.ui.theme.WarningYellow
+import com.example.moonsyncapp.ui.theme.WarningOrange
+import com.example.moonsyncapp.ui.theme.OnlineGreen
+import com.example.moonsyncapp.ui.theme.PointsGold
+import com.example.moonsyncapp.ui.theme.PointsGoldDark
+import com.example.moonsyncapp.ui.theme.FreezeBlue
 
 // ==========================================
 // COMMUNITY COLORS
 // ==========================================
 
-object CommunityColors {
-    val TextOnPastel = Color(0xFF2D2D2D)
-    val SecondaryTextOnPastel = Color(0xFF666666)
-
-    val HeaderGradientStart = Color(0xFF7B5EA7)
-    val HeaderGradientEnd = Color(0xFF9575CD)
-
+//object CommunityColors {
+//    val TextOnPastel = Color(0xFF2D2D2D)
+//    val SecondaryTextOnPastel = Color(0xFF666666)
+//
+//    val HeaderGradientStart = Color(0xFF7B5EA7)
+//    val HeaderGradientEnd = Color(0xFF9575CD)
+//
+//    val MenstrualRoom = Color(0xFFEC407A)
+//    val FollicularRoom = Color(0xFF66BB6A)
+//    val OvulationRoom = Color(0xFFFFA726)
+//    val LutealRoom = Color(0xFFAB47BC)
+//
+//    // Freeze token color (blue shield theme)
+//    val FreezeToken = Color(0xFF42A5F5)
+object CommunityPhaseColors {
     val MenstrualRoom = Color(0xFFEC407A)
     val FollicularRoom = Color(0xFF66BB6A)
     val OvulationRoom = Color(0xFFFFA726)
     val LutealRoom = Color(0xFFAB47BC)
-
-    // Freeze token color (blue shield theme)
-    val FreezeToken = Color(0xFF42A5F5)
 
     fun getPhaseRoomColor(phase: CyclePhase): Color {
         return when (phase) {
@@ -110,7 +127,8 @@ fun CommunityScreen(
     val pullRefreshState = rememberPullToRefreshState()
 
     var showMoodPicker by remember { mutableStateOf(false) }
-    var showFreezeTokenInfo by remember { mutableStateOf(false) }
+    //var showFreezeTokenInfo by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     // Lifecycle observer for app resume (daily login streak)
@@ -140,19 +158,19 @@ fun CommunityScreen(
     }
 
     // Freeze token info dialog
-    if (showFreezeTokenInfo) {
-        FreezeTokenInfoDialog(
-            onDismiss = { showFreezeTokenInfo = false }
-        )
-    }
-
-    // Milestone celebration dialog
-    showMilestoneCelebration?.let { celebration ->
-        MilestoneCelebrationDialog(
-            celebration = celebration,
-            onDismiss = { viewModel.dismissMilestoneCelebration() }
-        )
-    }
+//    if (showFreezeTokenInfo) {
+//        FreezeTokenInfoDialog(
+//            onDismiss = { showFreezeTokenInfo = false }
+//        )
+//    }
+//
+//    // Milestone celebration dialog
+//    showMilestoneCelebration?.let { celebration ->
+//        MilestoneCelebrationDialog(
+//            celebration = celebration,
+//            onDismiss = { viewModel.dismissMilestoneCelebration() }
+//        )
+//    }
 
     // Create post bottom sheet
     if (showCreatePostSheet) {
@@ -183,8 +201,25 @@ fun CommunityScreen(
                 CommunitySkeletonLoading()
             } else {
                 // Streak at-risk banner
+//                AnimatedVisibility(
+//                    visible = showStreakAtRiskBanner,
+//                    enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+//                    exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut()
+//                ) {
+//                    StreakAtRiskBanner(
+//                        streaks = userStreaks,
+//                        onSaveStreak = {
+//                            val atRiskStreak = userStreaks.firstOrNull { it.isAtRisk }
+//                            when (atRiskStreak?.type) {
+//                                StreakType.COMMUNITY -> viewModel.selectTab(CommunityTab.FEED)
+//                                StreakType.CHALLENGE -> viewModel.selectTab(CommunityTab.CHALLENGES)
+//                                else -> {}
+//                            }
+//                        }
+//                    )
+//                }
                 AnimatedVisibility(
-                    visible = showStreakAtRiskBanner,
+                    visible = false,
                     enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
                     exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut()
                 ) {
@@ -223,24 +258,48 @@ fun CommunityScreen(
                     when (selectedTab) {
                         CommunityTab.FEED -> FeedTabContent(
                             viewModel = viewModel,
-                            navController = navController
-                            // Pass padding hint to content if needed
+                            navController = navController,
+                            snackbarHostState = snackbarHostState
                         )
-                        CommunityTab.PHASE_ROOM -> PhaseRoomTabContent(
-                            viewModel = viewModel
+
+                        // Gated tabs — restore original composables when features are ready
+                        CommunityTab.PHASE_ROOM -> ComingSoonContent(
+                            emoji = "🌙",
+                            featureName = "Phase Rooms",
+                            description = "Connect with others in the same cycle phase. Share experiences in real-time with sisters who truly understand."
                         )
-                        CommunityTab.SEARCH -> SearchTabContent(
-                            viewModel = viewModel,
-                            navController = navController
+                        CommunityTab.SEARCH -> ComingSoonContent(
+                            emoji = "🔍",
+                            featureName = "Community Search",
+                            description = "Find posts, groups, and connect with members across the community."
                         )
-                        CommunityTab.GROUPS -> GroupsTabContent(
-                            viewModel = viewModel,
-                            navController = navController
+                        CommunityTab.GROUPS -> ComingSoonContent(
+                            emoji = "💜",
+                            featureName = "Groups & Circles",
+                            description = "Create and join groups based on shared interests, locations, and experiences."
                         )
-                        CommunityTab.CHALLENGES -> ChallengesTabContent(
-                            viewModel = viewModel,
-                            onFreezeTokenInfoClick = { showFreezeTokenInfo = true }
+                        CommunityTab.CHALLENGES -> ComingSoonContent(
+                            emoji = "🏆",
+                            featureName = "Challenges & Streaks",
+                            description = "Join wellness challenges, build streaks, and earn rewards with the community."
                         )
+
+                        // ===== ORIGINAL CODE (preserved for ungating — do not delete) =====
+                        // CommunityTab.PHASE_ROOM -> PhaseRoomTabContent(
+                        //     viewModel = viewModel
+                        // )
+                        // CommunityTab.SEARCH -> SearchTabContent(
+                        //     viewModel = viewModel,
+                        //     navController = navController
+                        // )
+                        // CommunityTab.GROUPS -> GroupsTabContent(
+                        //     viewModel = viewModel,
+                        //     navController = navController
+                        // )
+                        // CommunityTab.CHALLENGES -> ChallengesTabContent(
+                        //     viewModel = viewModel,
+                        //     onFreezeTokenInfoClick = { showFreezeTokenInfo = true }
+                        // )
                     }
                 }
             }
@@ -269,6 +328,7 @@ fun CommunityScreen(
             }
         }
 
+
         // Bottom Navigation
         Box(
             modifier = Modifier
@@ -279,6 +339,22 @@ fun CommunityScreen(
                 currentRoute = currentRoute,
                 navController = navController
             )
+            // Snackbar host — positioned above bottom nav
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 100.dp)
+                    .zIndex(15f)
+            ) { snackbarData ->
+                Snackbar(
+                    snackbarData = snackbarData,
+                    shape = RoundedCornerShape(16.dp),
+                    containerColor = MaterialTheme.colorScheme.inverseSurface,
+                    contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                    actionColor = MaterialTheme.colorScheme.inversePrimary
+                )
+            }
         }
     }
 }
@@ -312,11 +388,19 @@ private fun CommunityHeader(
             modifier = Modifier
                 .size(44.dp)
                 .clip(CircleShape)
+//                .background(
+//                    Brush.linearGradient(
+//                        colors = listOf(
+//                            CommunityColors.HeaderGradientStart,
+//                            CommunityColors.HeaderGradientEnd
+//                        )
+//                    )
+//                )
                 .background(
                     Brush.linearGradient(
                         colors = listOf(
-                            CommunityColors.HeaderGradientStart,
-                            CommunityColors.HeaderGradientEnd
+                            customColors().communityGradientStart,
+                            customColors().communityGradientEnd
                         )
                     )
                 )
@@ -545,7 +629,7 @@ private fun ProfessionalCategoryInfoDialog(
                         Text(text = "🩺", fontSize = 20.sp)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Apply for verification in Settings → Professional Verification",
+                            text = "Professional verification is available only for verified professionals.",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -624,6 +708,92 @@ private fun CommunityTabRow(
 // STREAK AT-RISK BANNER
 // ==========================================
 
+//@Composable
+//private fun StreakAtRiskBanner(
+//    streaks: List<UserStreak>,
+//    onSaveStreak: () -> Unit
+//) {
+//    val atRiskStreaks = streaks.filter { it.isAtRisk }
+//    if (atRiskStreaks.isEmpty()) return
+//
+//    val mostImportantStreak = atRiskStreaks.maxByOrNull { it.currentCount } ?: return
+//
+//    Card(
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            .padding(horizontal = 16.dp, vertical = 8.dp),
+//        colors = CardDefaults.cardColors(
+//            containerColor = Color(0xFFFFC107).copy(alpha = 0.15f)
+//        ),
+//        shape = RoundedCornerShape(16.dp)
+//    ) {
+//        Row(
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .padding(16.dp),
+//            verticalAlignment = Alignment.CenterVertically
+//        ) {
+//            val infiniteTransition = rememberInfiniteTransition(label = "warningPulse")
+//            val scale by infiniteTransition.animateFloat(
+//                initialValue = 1f,
+//                targetValue = 1.2f,
+//                animationSpec = infiniteRepeatable(
+//                    animation = tween(600),
+//                    repeatMode = RepeatMode.Reverse
+//                ),
+//                label = "warningScale"
+//            )
+//
+//            Icon(
+//                imageVector = Icons.Default.Warning,
+//                contentDescription = null,
+//                tint = Color(0xFFFF9800),
+//                modifier = Modifier
+//                    .size(24.dp)
+//                    .graphicsLayer {
+//                        scaleX = scale
+//                        scaleY = scale
+//                    }
+//            )
+//
+//            Spacer(modifier = Modifier.width(12.dp))
+//
+//            Column(modifier = Modifier.weight(1f)) {
+//                Text(
+//                    text = "${mostImportantStreak.currentCount}-day streak at risk!",
+//                    fontWeight = FontWeight.Bold,
+//                    fontSize = 16.sp,
+//                    color = MaterialTheme.colorScheme.onBackground
+//                )
+//                Text(
+//                    text = "${mostImportantStreak.hoursUntilBreak}h left • ${mostImportantStreak.type.label}",
+//                    fontSize = 13.sp,
+//                    color = MaterialTheme.colorScheme.onSurfaceVariant
+//                )
+//                if (mostImportantStreak.freezeTokensRemaining > 0) {
+//                    Text(
+//                        text = "🛡️ ${mostImportantStreak.freezeTokensRemaining} freeze available",
+//                        fontSize = 12.sp,
+//                        color = CommunityColors.FreezeToken,
+//                        modifier = Modifier.padding(top = 2.dp)
+//                    )
+//                }
+//            }
+//
+//            TextButton(
+//                onClick = onSaveStreak,
+//                colors = ButtonDefaults.textButtonColors(
+//                    contentColor = Color(0xFFFF9800)
+//                )
+//            ) {
+//                Text(
+//                    text = "Save it",
+//                    fontWeight = FontWeight.Bold
+//                )
+//            }
+//        }
+//    }
+//}
 @Composable
 private fun StreakAtRiskBanner(
     streaks: List<UserStreak>,
@@ -639,7 +809,8 @@ private fun StreakAtRiskBanner(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFFFC107).copy(alpha = 0.15f)
+            containerColor = WarningYellow.copy(alpha = 0.15f)
+            // WAS: Color(0xFFFFC107).copy(alpha = 0.15f)
         ),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -663,7 +834,7 @@ private fun StreakAtRiskBanner(
             Icon(
                 imageVector = Icons.Default.Warning,
                 contentDescription = null,
-                tint = Color(0xFFFF9800),
+                tint = WarningOrange, // WAS: Color(0xFFFF9800)
                 modifier = Modifier
                     .size(24.dp)
                     .graphicsLayer {
@@ -690,7 +861,7 @@ private fun StreakAtRiskBanner(
                     Text(
                         text = "🛡️ ${mostImportantStreak.freezeTokensRemaining} freeze available",
                         fontSize = 12.sp,
-                        color = CommunityColors.FreezeToken,
+                        color = FreezeBlue, // WAS: CommunityColors.FreezeToken
                         modifier = Modifier.padding(top = 2.dp)
                     )
                 }
@@ -699,7 +870,7 @@ private fun StreakAtRiskBanner(
             TextButton(
                 onClick = onSaveStreak,
                 colors = ButtonDefaults.textButtonColors(
-                    contentColor = Color(0xFFFF9800)
+                    contentColor = WarningOrange // WAS: Color(0xFFFF9800)
                 )
             ) {
                 Text(
@@ -797,7 +968,8 @@ private fun MilestoneCelebrationDialog(
                         Text(
                             text = "+${celebration.milestone.pointsReward} points",
                             fontSize = 16.sp,
-                            color = Color(0xFFFFB300),
+//                            color = Color(0xFFFFB300),
+                            color = PointsGoldDark,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
@@ -807,7 +979,8 @@ private fun MilestoneCelebrationDialog(
                         Spacer(modifier = Modifier.height(12.dp))
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = CommunityColors.FreezeToken.copy(alpha = 0.15f)
+//                            color = CommunityColors.FreezeToken.copy(alpha = 0.15f)
+                            color = FreezeBlue.copy(alpha = 0.15f)
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -819,7 +992,8 @@ private fun MilestoneCelebrationDialog(
                                     text = "Earned 1 Streak Freeze!",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Medium,
-                                    color = CommunityColors.FreezeToken
+//                                    color = CommunityColors.FreezeToken
+                                    color = FreezeBlue
                                 )
                             }
                         }
@@ -855,8 +1029,11 @@ private fun MilestoneCelebrationDialog(
 @Composable
 private fun FeedTabContent(
     viewModel: CommunityViewModel,
-    navController: NavController
+    navController: NavController,
+    snackbarHostState: SnackbarHostState
 ) {
+    // ADD at top of function body:
+    val scope = rememberCoroutineScope()
     val posts by viewModel.filteredPosts.collectAsState()
     val selectedCategory by viewModel.selectedPostCategory.collectAsState()
     val currentUser by viewModel.currentUser.collectAsState()
@@ -865,6 +1042,17 @@ private fun FeedTabContent(
     var showShareSheet by remember { mutableStateOf<CommunityPost?>(null) }
 
     // New report sheet for posts
+//    reportPostTarget?.let { post ->
+//        CommunityReportSheet(
+//            contentType = ContentType.POST,
+//            context = buildPostReportContext(post),
+//            onDismissRequest = { reportPostTarget = null },
+//            onSubmitReport = { reason, notes ->
+//                viewModel.reportPost(post.id, reason, notes)
+//                reportPostTarget = null
+//            }
+//        )
+//    }
     reportPostTarget?.let { post ->
         CommunityReportSheet(
             contentType = ContentType.POST,
@@ -873,6 +1061,12 @@ private fun FeedTabContent(
             onSubmitReport = { reason, notes ->
                 viewModel.reportPost(post.id, reason, notes)
                 reportPostTarget = null
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = "Report submitted. Our team will review this. 💜",
+                        duration = SnackbarDuration.Short
+                    )
+                }
             }
         )
     }
@@ -882,9 +1076,30 @@ private fun FeedTabContent(
         ShareBottomSheet(
             post = post,
             onDismiss = { showShareSheet = null },
-            onShareToGroup = { /* TODO: Implement */ },
-            onCopyLink = { /* TODO: Implement */ },
-            onShareExternal = { /* TODO: Implement */ }
+            onShareToGroup = {
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = "Sharing to groups — Coming Soon ✨",
+                        duration = SnackbarDuration.Short
+                    )
+                }
+            },
+            onCopyLink = {
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = "Link sharing — Coming Soon ✨",
+                        duration = SnackbarDuration.Short
+                    )
+                }
+            },
+            onShareExternal = {
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = "External sharing — Coming Soon ✨",
+                        duration = SnackbarDuration.Short
+                    )
+                }
+            }
         )
     }
 
@@ -1105,7 +1320,7 @@ private fun PostCard(
                                 Text(
                                     text = post.phaseTag.displayName,
                                     fontSize = 12.sp,
-                                    color = CommunityColors.getPhaseRoomColor(post.phaseTag)
+                                    color = CommunityPhaseColors.getPhaseRoomColor(post.phaseTag)
                                 )
                             }
                         }
@@ -1276,7 +1491,7 @@ private fun UserAvatar(
     size: androidx.compose.ui.unit.Dp
 ) {
     val phaseColor = user.currentPhase?.let {
-        CommunityColors.getPhaseRoomColor(it)
+        CommunityPhaseColors.getPhaseRoomColor(it)
     } ?: MaterialTheme.colorScheme.primary
 
     Box(
@@ -1731,7 +1946,7 @@ private fun PhaseRoomTabContent(
                                 messageText = ""
                             }
                         },
-                        phaseColor = CommunityColors.getPhaseRoomColor(room.phase)
+                        phaseColor = CommunityPhaseColors.getPhaseRoomColor(room.phase)
                     )
                 }
             }
@@ -1744,7 +1959,7 @@ private fun PhaseRoomChip(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val color = CommunityColors.getPhaseRoomColor(room.phase)
+    val color = CommunityPhaseColors.getPhaseRoomColor(room.phase)
 
     Surface(
         shape = RoundedCornerShape(16.dp),
@@ -1782,7 +1997,7 @@ private fun PhaseRoomChip(
 
 @Composable
 private fun PhaseRoomHeader(room: PhaseRoom) {
-    val color = CommunityColors.getPhaseRoomColor(room.phase)
+    val color = CommunityPhaseColors.getPhaseRoomColor(room.phase)
 
     Card(
         modifier = Modifier
@@ -1828,7 +2043,8 @@ private fun PhaseRoomHeader(room: PhaseRoom) {
             // Online indicator
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = Color(0xFF4CAF50).copy(alpha = 0.1f)
+//                color = Color(0xFF4CAF50).copy(alpha = 0.1f)
+                color = OnlineGreen.copy(alpha = 0.1f)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -1838,14 +2054,16 @@ private fun PhaseRoomHeader(room: PhaseRoom) {
                         modifier = Modifier
                             .size(8.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF4CAF50))
+//                            .background(Color(0xFF4CAF50))
+                            .background(OnlineGreen)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "${room.activeUsers}",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color(0xFF4CAF50)
+//                        color = Color(0xFF4CAF50)
+                        color = OnlineGreen
                     )
                 }
             }
@@ -2879,7 +3097,7 @@ private fun EnhancedUserStatsCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(CommunityColors.FreezeToken.copy(alpha = 0.1f))
+                    .background(FreezeBlue.copy(alpha = 0.1f))
                     .clickable { onFreezeTokenInfoClick() }
                     .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -2891,7 +3109,8 @@ private fun EnhancedUserStatsCard(
                         text = "Streak Freeze Tokens",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
-                        color = CommunityColors.FreezeToken
+//                        color = FreezeBlue.FreezeToken
+                        color = FreezeBlue
                     )
                     val totalFreezeTokens = streaks.sumOf { it.freezeTokensRemaining }
                     Text(
@@ -2903,7 +3122,7 @@ private fun EnhancedUserStatsCard(
                 Icon(
                     imageVector = Icons.Default.HelpOutline,
                     contentDescription = "Info",
-                    tint = CommunityColors.FreezeToken,
+                    tint = FreezeBlue,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -2957,7 +3176,7 @@ private fun EnhancedStreakItem(streak: UserStreak) {
                         .offset(x = 4.dp, y = (-4).dp)
                         .size(18.dp)
                         .clip(CircleShape)
-                        .background(CommunityColors.FreezeToken),
+                        .background(FreezeBlue),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -3068,13 +3287,15 @@ private fun ChallengeCard(
                 // Points badge
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFFFFD700).copy(alpha = 0.2f)
+//                    color = Color(0xFFFFD700).copy(alpha = 0.2f)
+                    color = PointsGold.copy(alpha = 0.2f)
                 ) {
                     Text(
                         text = "+${challenge.pointsReward} pts",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFFFFB300),
+//                        color = Color(0xFFFFB300),
+                        color = PointsGoldDark,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
@@ -3348,7 +3569,7 @@ private fun CreatePostBottomSheet(
                                     Modifier.background(MaterialTheme.colorScheme.surfaceVariant)
                                 } else {
                                     val phaseColor = currentUser.currentPhase?.let {
-                                        CommunityColors.getPhaseRoomColor(it)
+                                        CommunityPhaseColors.getPhaseRoomColor(it)
                                     } ?: MaterialTheme.colorScheme.primary
 
                                     Modifier.background(
@@ -3550,9 +3771,10 @@ private fun CreatePostBottomSheet(
                             }
                         },
                         colors = if (selectedPhase != null) {
+                            val phaseColor = CommunityPhaseColors.getPhaseRoomColor(selectedPhase!!)
                             FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = CommunityColors.getPhaseRoomColor(selectedPhase!!).copy(alpha = 0.2f),
-                                selectedLabelColor = CommunityColors.getPhaseRoomColor(selectedPhase!!)
+                                selectedContainerColor = phaseColor.copy(alpha = 0.2f),
+                                selectedLabelColor = phaseColor
                             )
                         } else {
                             FilterChipDefaults.filterChipColors()
@@ -3895,6 +4117,71 @@ private fun EmptyStateMessage(
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center
             )
+        }
+    }
+}
+
+// ==========================================
+// COMING SOON PLACEHOLDER (Feature Gating)
+// ==========================================
+
+@Composable
+private fun ComingSoonContent(
+    emoji: String,
+    featureName: String,
+    description: String,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 32.dp)
+        ) {
+            Text(
+                text = emoji,
+                fontSize = 72.sp
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = featureName,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = description,
+                fontSize = 15.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                lineHeight = 22.sp
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+            ) {
+                Text(
+                    text = "Coming Soon ✨",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(
+                        horizontal = 24.dp,
+                        vertical = 10.dp
+                    )
+                )
+            }
         }
     }
 }
