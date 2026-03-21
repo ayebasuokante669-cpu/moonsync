@@ -1,0 +1,43 @@
+@import 'tailwindcss' source(none);
+@source '../**/*.{js,ts,jsx,tsx}';
+@plugin "@tailwindcss/typography";
+
+@import 'tw-animate-css';
+
+/* Custom Scrollbar Styles - Minimal & Smooth */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #E0D9F5 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #E0D9F5;
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #9B87E8;
+}
+
+/* Only show scrollbar on hover for cleaner look */
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+*:hover::-webkit-scrollbar-thumb {
+  background: #E0D9F5;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #9B87E8;
+}

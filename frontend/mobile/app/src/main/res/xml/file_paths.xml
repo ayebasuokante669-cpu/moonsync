@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- For camera-captured photos -->
+    <cache-path
+        name="camera_photos"
+        path="photos/" />
+
+    <!-- For recorded audio -->
+    <cache-path
+        name="audio_recordings"
+        path="audio/" />
+</paths>

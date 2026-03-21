@@ -43,6 +43,11 @@ import java.time.temporal.ChronoUnit
 import com.example.moonsyncapp.data.model.ContentType
 import com.example.moonsyncapp.data.model.ReportReason
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.Snackbar
+import kotlinx.coroutines.launch
 
 // Comment sorting options enum
 enum class CommentSortOption(val displayName: String) {
@@ -107,6 +112,8 @@ fun PostDetailScreen(
     var showSortMenu by remember { mutableStateOf(false) }
     var reportCommentTarget by remember { mutableStateOf<PostComment?>(null) }
     val focusManager = LocalFocusManager.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     // Mock comments (in real app, fetch from ViewModel)
     val comments = remember { getMockComments(postId) }
@@ -142,6 +149,14 @@ fun PostDetailScreen(
                 // TODO: Wire to ViewModel when reportComment() is implemented
                 // viewModel.reportComment(comment.id, reason, notes)
                 reportCommentTarget = null
+
+                // Show confirmation snackbar
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        message = "Report submitted. Our team will review this. 💜",
+                        duration = SnackbarDuration.Short
+                    )
+                }
             }
         )
     }
@@ -186,6 +201,16 @@ fun PostDetailScreen(
                     }
                 }
             )
+        },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { snackbarData ->
+                Snackbar(
+                    snackbarData = snackbarData,
+                    shape = RoundedCornerShape(16.dp),
+                    containerColor = MaterialTheme.colorScheme.inverseSurface,
+                    contentColor = MaterialTheme.colorScheme.inverseOnSurface
+                )
+            }
         }
     ) { paddingValues ->
         LazyColumn(
@@ -473,7 +498,7 @@ private fun PostDetailHeader(
                             Text(
                                 text = post.phaseTag.displayName,
                                 fontSize = 12.sp,
-                                color = CommunityColors.getPhaseRoomColor(post.phaseTag)
+                                color = CommunityPhaseColors.getPhaseRoomColor(post.phaseTag)
                             )
                         }
                     }
@@ -1063,7 +1088,7 @@ private fun UserAvatar(
     size: androidx.compose.ui.unit.Dp
 ) {
     val phaseColor = user.currentPhase?.let {
-        CommunityColors.getPhaseRoomColor(it)
+        CommunityPhaseColors.getPhaseRoomColor(it)
     } ?: MaterialTheme.colorScheme.primary
 
     Box(
