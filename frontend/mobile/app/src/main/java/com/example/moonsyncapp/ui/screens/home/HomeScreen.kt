@@ -70,29 +70,36 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
+import com.example.moonsyncapp.ui.theme.customColors
+import com.example.moonsyncapp.ui.theme.AccentPink
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import com.example.moonsyncapp.ui.screens.home.CycleViewModelFactory
 
-object HomeColors {
-    val AdviceCardBg = Color(0xFFF8F4FC)
-    val AdviceCardGlass = Color(0xCCFFFFFF)
-    val CommunityGradientStart = Color(0xFF7B5EA7)
-    val CommunityGradientEnd = Color(0xFF9575CD)
-    val AccentPink = Color(0xFFE91E63)
-    val SoftPink = Color(0xFFFFE4EC)
-    val SkeletonBase = Color(0xFFE0E0E0)
-    val SkeletonHighlight = Color(0xFFF5F5F5)
-
-    // Hexagon text color - always dark for pastel backgrounds
-    val HexagonTextPrimary = Color(0xFF2D2D2D)
-    val HexagonTextSecondary = Color(0xFF666666)
-}
+//object HomeColors {
+//    val AdviceCardBg = Color(0xFFF8F4FC)
+//    val AdviceCardGlass = Color(0xCCFFFFFF)
+//    val CommunityGradientStart = Color(0xFF7B5EA7)
+//    val CommunityGradientEnd = Color(0xFF9575CD)
+//    val AccentPink = Color(0xFFE91E63)
+//    val SoftPink = Color(0xFFFFE4EC)
+//    val SkeletonBase = Color(0xFFE0E0E0)
+//    val SkeletonHighlight = Color(0xFFF5F5F5)
+//
+//    // Hexagon text color - always dark for pastel backgrounds
+//    val HexagonTextPrimary = Color(0xFF2D2D2D)
+//    val HexagonTextSecondary = Color(0xFF666666)
+//}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
-    viewModel: CycleViewModel = viewModel(),
+    viewModel: CycleViewModel = viewModel(
+        factory = CycleViewModelFactory(LocalContext.current)
+    ),
     onboardingManager: OnboardingManager? = null
-) {
+){
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -132,15 +139,15 @@ fun HomeScreen(
     // Staggered animation states
     var showHexagon by remember { mutableStateOf(false) }
     var showAdviceCard by remember { mutableStateOf(false) }
-    var showCommunityCard by remember { mutableStateOf(false) }
+//    var showCommunityCard by remember { mutableStateOf(false) }
 
     LaunchedEffect(isLoading) {
         if (!isLoading) {
             showHexagon = true
             kotlinx.coroutines.delay(200)
             showAdviceCard = true
-            kotlinx.coroutines.delay(200)
-            showCommunityCard = true
+//            kotlinx.coroutines.delay(200)
+//            showCommunityCard = true
         }
     }
 
@@ -228,30 +235,30 @@ fun HomeScreen(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Animated Community Card
-                        AnimatedVisibility(
-                            visible = showCommunityCard,
-                            enter = fadeIn(tween(500)) + slideInVertically(
-                                animationSpec = tween(500),
-                                initialOffsetY = { it / 3 }
-                            )
-                        ) {
-                            CommunityCard(
-                                onJoinClick = {
-                                    navController.navigate(Routes.COMMUNITY) {
-                                        popUpTo(Routes.HOME) {
-                                            inclusive = false
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                },
-                                modifier = Modifier.padding(horizontal = 20.dp)
-                            )
-                        }
+//                        Spacer(modifier = Modifier.height(16.dp))
+//
+//                        // Animated Community Card
+//                        AnimatedVisibility(
+//                            visible = showCommunityCard,
+//                            enter = fadeIn(tween(500)) + slideInVertically(
+//                                animationSpec = tween(500),
+//                                initialOffsetY = { it / 3 }
+//                            )
+//                        ) {
+//                            CommunityCard(
+//                                onJoinClick = {
+//                                    navController.navigate(Routes.COMMUNITY) {
+//                                        popUpTo(Routes.HOME) {
+//                                            inclusive = false
+//                                            saveState = true
+//                                        }
+//                                        launchSingleTop = true
+//                                        restoreState = true
+//                                    }
+//                                },
+//                                modifier = Modifier.padding(horizontal = 20.dp)
+//                            )
+//                        }
 
                         Spacer(modifier = Modifier.height(24.dp))
                     }
@@ -361,7 +368,7 @@ private fun CollapsingHeaderSection(
                     )
                     if (collapseProgress < 0.3f) {
                         Text(
-                            text = " • 🔥 $cycleStreak month${if (cycleStreak != 1) "s" else ""}",
+                            text = " • 🔥 $cycleStreak day${if (cycleStreak != 1) "s" else ""}",
                             fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -385,7 +392,8 @@ private fun CollapsingHeaderSection(
                         modifier = Modifier
                             .size(8.dp)
                             .clip(CircleShape)
-                            .background(HomeColors.AccentPink)
+//                            .background(HomeColors.AccentPink)
+                            .background(AccentPink)
                             .align(Alignment.TopEnd)
                     )
                 }
@@ -394,8 +402,32 @@ private fun CollapsingHeaderSection(
     }
 }
 
+//@Composable
+//private fun SkeletonLoadingContent() {
+//    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
+//    val shimmerTranslateAnim by infiniteTransition.animateFloat(
+//        initialValue = 0f,
+//        targetValue = 1000f,
+//        animationSpec = infiniteRepeatable(
+//            animation = tween(1500, easing = LinearEasing),
+//            repeatMode = RepeatMode.Restart
+//        ),
+//        label = "shimmer"
+//    )
+//
+//    val shimmerGradient = Brush.horizontalGradient(
+//        colors = listOf(
+//            HomeColors.SkeletonBase,
+//            HomeColors.SkeletonHighlight,
+//            HomeColors.SkeletonBase
+//        ),
+//        startX = shimmerTranslateAnim - 500f,
+//        endX = shimmerTranslateAnim
+//    )
 @Composable
 private fun SkeletonLoadingContent() {
+    val colors = customColors() // ADD this line
+
     val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
     val shimmerTranslateAnim by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -407,15 +439,27 @@ private fun SkeletonLoadingContent() {
         label = "shimmer"
     )
 
+    // ===== CHANGE shimmer gradient FROM: =====
+    // val shimmerGradient = Brush.horizontalGradient(
+    //     colors = listOf(
+    //         HomeColors.SkeletonBase,
+    //         HomeColors.SkeletonHighlight,
+    //         HomeColors.SkeletonBase
+    //     ),
+    //     ...
+    // )
+
+    // ===== TO: =====
     val shimmerGradient = Brush.horizontalGradient(
         colors = listOf(
-            HomeColors.SkeletonBase,
-            HomeColors.SkeletonHighlight,
-            HomeColors.SkeletonBase
+            colors.skeletonBase,
+            colors.skeletonHighlight,
+            colors.skeletonBase
         ),
         startX = shimmerTranslateAnim - 500f,
         endX = shimmerTranslateAnim
     )
+
 
     Column(
         modifier = Modifier
@@ -560,6 +604,10 @@ private fun CurrentPhaseHexagon(
     val fillColor = PhaseColors.getFillColor(phase)
     val borderColor = PhaseColors.getBorderColor(phase)
     val progressColor = PhaseColors.getProgressColor(phase)
+//    val colors = customColors()
+    // Hexagon text colors - ALWAYS dark because fill is always pastel
+    val hexagonTextPrimary = Color(0xFF2D2D2D)
+    val hexagonTextSecondary = Color(0xFF666666)
 
     var animatedProgress by remember { mutableStateOf(0f) }
     LaunchedEffect(cycleData.phaseProgress) {
@@ -593,19 +641,22 @@ private fun CurrentPhaseHexagon(
                 text = "Day ${cycleData.cycleDay}",
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Bold,
-                color = HomeColors.HexagonTextPrimary // FIXED: Dark text on pastel
+//                color = HomeColors.HexagonTextPrimary // FIXED: Dark text on pastel
+                color = hexagonTextPrimary
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "of ${cycleData.cycleLength}-day cycle",
                 fontSize = 14.sp,
-                color = HomeColors.HexagonTextSecondary // FIXED: Dark secondary text
+//               color = HomeColors.HexagonTextSecondary // FIXED: Dark secondary text
+                color = hexagonTextSecondary
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = phase.description,
                 fontSize = 13.sp,
-                color = HomeColors.HexagonTextSecondary, // FIXED: Dark text
+//                color = HomeColors.HexagonTextSecondary, // FIXED: Dark text
+                color = hexagonTextSecondary,
                 textAlign = TextAlign.Center
             )
         }
@@ -621,7 +672,11 @@ private fun NextEventHexagon(
     val isNextPeriod = nextEventInfo.title == "Next Period"
     val fillColor = if (isNextPeriod) PhaseColors.MenstrualFill else PhaseColors.OvulationFill
     val borderColor = if (isNextPeriod) PhaseColors.MenstrualBorder else PhaseColors.OvulationBorder
+//    val colors = customColors()
     val progressColor = if (isNextPeriod) PhaseColors.MenstrualProgress else PhaseColors.OvulationProgress
+    // Hexagon text colors - ALWAYS dark because fill is always pastel
+    val hexagonTextPrimary = Color(0xFF2D2D2D)
+    val hexagonTextSecondary = Color(0xFF666666)
 
     var animatedProgress by remember { mutableStateOf(0f) }
     LaunchedEffect(nextEventInfo.progress) {
@@ -656,7 +711,8 @@ private fun NextEventHexagon(
                 text = nextEventInfo.countdown,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
-                color = HomeColors.HexagonTextPrimary // FIXED: Dark text
+//                color = HomeColors.HexagonTextPrimary // FIXED: Dark text
+                color = hexagonTextPrimary
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
@@ -669,7 +725,8 @@ private fun NextEventHexagon(
             Text(
                 text = nextEventInfo.subtitle,
                 fontSize = 11.sp,
-                color = HomeColors.HexagonTextSecondary, // FIXED: Dark text
+//                color = HomeColors.HexagonTextSecondary, // FIXED: Dark text
+                color = hexagonTextSecondary,
                 textAlign = TextAlign.Center,
                 lineHeight = 14.sp,
                 maxLines = 2
@@ -920,29 +977,33 @@ private fun AdviceCard(
     modifier: Modifier = Modifier
 ) {
     val isDarkTheme = isSystemInDarkTheme()
+    val colors = customColors()
 
-    val (emoji, title, subtitle) = when (currentPhase) {
-        CyclePhase.MENSTRUAL -> Triple(
-            "🌸",
-            "Rest and be gentle with yourself",
-            "Warm drinks and light stretching can help ease discomfort"
-        )
-        CyclePhase.FOLLICULAR -> Triple(
-            "💧",
-            "Stay hydrated and energized",
-            "Great time for trying new activities and social plans"
-        )
-        CyclePhase.OVULATION -> Triple(
-            "✨",
-            "You're at your peak energy",
-            "Perfect time for important conversations and challenges"
-        )
-        CyclePhase.LUTEAL -> Triple(
-            "🍵",
-            "Practice self-care and slow down",
-            "Focus on nourishing foods and quality sleep"
-        )
-    }
+//    val (emoji, title, subtitle) = when (currentPhase) {
+//        CyclePhase.MENSTRUAL -> Triple(
+//            "🌸",
+//            "Rest and be gentle with yourself",
+//            "Warm drinks and light stretching can help ease discomfort"
+//        )
+//        CyclePhase.FOLLICULAR -> Triple(
+//            "💧",
+//            "Stay hydrated and energized",
+//            "Great time for trying new activities and social plans"
+//        )
+//        CyclePhase.OVULATION -> Triple(
+//            "✨",
+//            "You're at your peak energy",
+//            "Perfect time for important conversations and challenges"
+//        )
+//        CyclePhase.LUTEAL -> Triple(
+//            "🍵",
+//            "Practice self-care and slow down",
+//            "Focus on nourishing foods and quality sleep"
+//        )
+//    }
+    val emoji = "💡"
+    val title = "Health Tips"
+    val subtitle = "Personalized wellness advice for your cycle"
 
     var isPressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
@@ -973,7 +1034,8 @@ private fun AdviceCard(
             },
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = HomeColors.AdviceCardGlass
+//            containerColor = HomeColors.AdviceCardGlass
+            containerColor = colors.adviceCardGlass
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         border = BorderStroke(
@@ -990,9 +1052,11 @@ private fun AdviceCard(
                             if (isDarkTheme) {
                                 MaterialTheme.colorScheme.surface.copy(alpha = 0.3f)
                             } else {
-                                Color.White.copy(alpha = 0.9f)
+//                                Color.White.copy(alpha = 0.9f)
+                                MaterialTheme.colorScheme.background.copy(alpha = 0.9f)
                             },
-                            HomeColors.AdviceCardBg.copy(alpha = 0.7f)
+                            colors.adviceCardBg.copy(alpha = 0.7f)
+                            // WAS: HomeColors.AdviceCardBg.copy(alpha = 0.7f)
                         )
                     )
                 )
@@ -1003,7 +1067,8 @@ private fun AdviceCard(
                 modifier = Modifier
                     .size(52.dp)
                     .clip(CircleShape)
-                    .background(HomeColors.SoftPink),
+//                    .background(HomeColors.SoftPink),
+                    .background(colors.softPink),
                 contentAlignment = Alignment.Center
             ) {
                 Text(text = emoji, fontSize = 28.sp)
@@ -1036,92 +1101,96 @@ private fun AdviceCard(
     }
 }
 
-@Composable
-private fun CommunityCard(
-    onJoinClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var isPressed by remember { mutableStateOf(false) }
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium
-        ),
-        label = "communityCardScale"
-    )
-
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onPress = {
-                        isPressed = true
-                        tryAwaitRelease()
-                        isPressed = false
-                    },
-                    onTap = { onJoinClick() }
-                )
-            },
-        shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            HomeColors.CommunityGradientStart,
-                            HomeColors.CommunityGradientEnd
-                        )
-                    )
-                )
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp)
-            ) {
-                Text(
-                    text = "Community Activity",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = "• Managing PMS naturally\n• Sarah shared her insights\n• Join wellness discussion",
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.9f),
-                    lineHeight = 22.sp
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
-                    onClick = onJoinClick,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = HomeColors.AccentPink
-                    ),
-                    shape = RoundedCornerShape(24.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "Join Community",
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-                }
-            }
-        }
-    }
-}
+//@Composable
+//private fun CommunityCard(
+//    onJoinClick: () -> Unit,
+//    modifier: Modifier = Modifier
+//) {
+//    val colors = customColors()
+//    var isPressed by remember { mutableStateOf(false) }
+//    val scale by animateFloatAsState(
+//        targetValue = if (isPressed) 0.97f else 1f,
+//        animationSpec = spring(
+//            dampingRatio = Spring.DampingRatioMediumBouncy,
+//            stiffness = Spring.StiffnessMedium
+//        ),
+//        label = "communityCardScale"
+//    )
+//
+//    Card(
+//        modifier = modifier
+//            .fillMaxWidth()
+//            .graphicsLayer {
+//                scaleX = scale
+//                scaleY = scale
+//            }
+//            .pointerInput(Unit) {
+//                detectTapGestures(
+//                    onPress = {
+//                        isPressed = true
+//                        tryAwaitRelease()
+//                        isPressed = false
+//                    },
+//                    onTap = { onJoinClick() }
+//                )
+//            },
+//        shape = RoundedCornerShape(20.dp),
+//        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+//    ) {
+//        Box(
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .background(
+//                    Brush.horizontalGradient(
+//                        colors = listOf(
+////                            HomeColors.CommunityGradientStart,
+////                            HomeColors.CommunityGradientEnd
+//                             colors.communityGradientStart,
+//                             colors.communityGradientEnd
+//                        )
+//                    )
+//                )
+//        ) {
+//            Column(
+//                modifier = Modifier.padding(20.dp)
+//            ) {
+//                Text(
+//                    text = "Community Activity",
+//                    fontSize = 18.sp,
+//                    fontWeight = FontWeight.Bold,
+//                    color = Color.White
+//                )
+//
+//                Spacer(modifier = Modifier.height(12.dp))
+//
+//                Text(
+//                    text = "• Managing PMS naturally\n• Sarah shared her insights\n• Join wellness discussion",
+//                    fontSize = 14.sp,
+//                    color = Color.White.copy(alpha = 0.9f),
+//                    lineHeight = 22.sp
+//                )
+//
+//                Spacer(modifier = Modifier.height(16.dp))
+//
+//                Button(
+//                    onClick = onJoinClick,
+//                    colors = ButtonDefaults.buttonColors(
+////                        containerColor = HomeColors.AccentPink
+//                        containerColor = AccentPink
+//                    ),
+//                    shape = RoundedCornerShape(24.dp),
+//                    modifier = Modifier.fillMaxWidth()
+//                ) {
+//                    Text(
+//                        text = "Join Community",
+//                        fontWeight = FontWeight.SemiBold,
+//                        modifier = Modifier.padding(vertical = 4.dp)
+//                    )
+//                }
+//            }
+//        }
+//    }
+//}
 
 @Composable
 private fun MomoChatFAB(
@@ -1146,11 +1215,12 @@ private fun MomoChatFAB(
         modifier = modifier
             .size(64.dp)
             .graphicsLayer { translationY = -floatOffset },
-        containerColor = if (isDarkTheme) {
-            MaterialTheme.colorScheme.surface  // Slightly off-white in dark mode
-        } else {
-            Color.White  // Pure white in light mode
-        },
+//        containerColor = if (isDarkTheme) {
+//            MaterialTheme.colorScheme.surface  // Slightly off-white in dark mode
+//        } else {
+//            Color.White  // Pure white in light mode
+//        },
+        containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.primary,
         shape = CircleShape,
         elevation = FloatingActionButtonDefaults.elevation(
@@ -1160,7 +1230,7 @@ private fun MomoChatFAB(
     ) {
         Image(
             painter = painterResource(id = R.drawable.momo),
-            contentDescription = "Chat with Momo",
+            contentDescription = "Chat with Cyra",
             modifier = Modifier
                 .fillMaxWidth(0.85f)
                 .aspectRatio(1f),
@@ -1243,7 +1313,7 @@ private fun HomeIntroOverlay(
                 onSkip = onSkip
             )
             2 -> SpotlightTooltip(
-                title = "Chat with Momo 💜",
+                title = "Chat with Cyra 💜",
                 description = "Tap here anytime to ask questions or get personalized cycle advice!",
                 position = TooltipPosition.ABOVE,
                 targetY = 0.65f,

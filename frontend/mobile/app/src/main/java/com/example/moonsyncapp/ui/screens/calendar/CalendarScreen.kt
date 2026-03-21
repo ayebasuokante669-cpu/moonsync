@@ -468,6 +468,9 @@ private fun CalendarDateCell(
 ) {
     val isDarkTheme = isSystemInDarkTheme()
 
+    // Background color for range indicators (THEME-AWARE) — MORE SUBTLE
+    val subtleAlpha = if (isDarkTheme) 0.5f else 0.35f  // Reduced opacity
+
     // Background color for range indicators (THEME-AWARE)
     val backgroundColor = when {
         isFertile -> CalendarDateColors.fertileBackground()
@@ -520,10 +523,11 @@ private fun CalendarDateCell(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .clip(RoundedCornerShape(25.dp))
             .background(backgroundColor)
             .clickable { onClick() },
         contentAlignment = Alignment.Center
-    ) {
+    ){
         Box(
             modifier = Modifier
                 .size(36.dp)
@@ -551,6 +555,65 @@ private fun CalendarDateCell(
     }
 }
 
+//@Composable
+//private fun LegendCard() {
+//    Card(
+//        modifier = Modifier.fillMaxWidth(),
+//        shape = RoundedCornerShape(16.dp),
+//        colors = CardDefaults.cardColors(
+//            containerColor = MaterialTheme.colorScheme.surface
+//        ),
+//        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+//    ) {
+//        Column(
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .padding(16.dp),
+//            verticalArrangement = Arrangement.spacedBy(12.dp)
+//        ) {
+//            Text(
+//                text = "Legend",
+//                fontSize = 14.sp,
+//                fontWeight = FontWeight.SemiBold,
+//                color = MaterialTheme.colorScheme.onSurface
+//            )
+//
+//            Row(
+//                modifier = Modifier.fillMaxWidth(),
+//                horizontalArrangement = Arrangement.SpaceEvenly
+//            ) {
+//                LegendItem(
+//                    color = CalendarDateColors.Period,
+//                    label = "Period",
+//                    modifier = Modifier.weight(1f)
+//                )
+//                LegendItem(
+//                    color = CalendarDateColors.PredictedPeriod,
+//                    label = "Predicted",
+//                    isBorder = true,
+//                    modifier = Modifier.weight(1f)
+//                )
+//            }
+//
+//            Row(
+//                modifier = Modifier.fillMaxWidth(),
+//                horizontalArrangement = Arrangement.SpaceEvenly
+//            ) {
+//                LegendItem(
+//                    color = CalendarDateColors.Ovulation,
+//                    label = "Ovulation",
+//                    modifier = Modifier.weight(1f)
+//                )
+//                LegendItem(
+//                    color = CalendarDateColors.Fertile,
+//                    label = "Fertile",
+//                    modifier = Modifier.weight(1f)
+//                )
+//            }
+//        }
+//    }
+//}
+
 @Composable
 private fun LegendCard() {
     Card(
@@ -572,6 +635,14 @@ private fun LegendCard() {
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
+            )
+
+            // Date indicators (circles)
+            Text(
+                text = "Date Indicators",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium
             )
 
             Row(
@@ -601,8 +672,35 @@ private fun LegendCard() {
                     modifier = Modifier.weight(1f)
                 )
                 LegendItem(
-                    color = CalendarDateColors.Fertile,
-                    label = "Fertile",
+                    color = MaterialTheme.colorScheme.primary,
+                    label = "Today",
+                    isBorder = true,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Range backgrounds
+            Text(
+                text = "Date Ranges",
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                RangeLegendItem(
+                    color = CalendarDateColors.fertileBackground(),
+                    label = "Fertile Window",
+                    modifier = Modifier.weight(1f)
+                )
+                RangeLegendItem(
+                    color = CalendarDateColors.periodBackground(),
+                    label = "Period Days",
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -640,6 +738,34 @@ private fun LegendItem(
         Text(
             text = label,
             fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+private fun RangeLegendItem(
+    color: Color,
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        // Rounded rectangle to show it's a range/background
+        Box(
+            modifier = Modifier
+                .width(24.dp)
+                .height(14.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(color.copy(alpha = 0.6f))
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = label,
+            fontSize = 11.sp,
             color = MaterialTheme.colorScheme.onSurface
         )
     }
