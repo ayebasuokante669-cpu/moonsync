@@ -1,51 +1,40 @@
-"""
-Authentication routes.
-This file defines all auth-related API endpoints.
-"""
+from fastapi import APIRouter, HTTPException, Request
+from app.auth.schemas import TokenRequest
+from app.auth.service import (
+    verify_firebase_token_and_get_user,
+    register_failed_attempt
+)
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
-from fastapi import APIRouter, Depends, HTTPException, status
-
-from app.auth.schemas import TokenRequest, UserResponse
-from app.auth.service import verify_firebase_token_and_get_user
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
-@router.post("/login", response_model=UserResponse)
-async def login_with_firebase(payload: TokenRequest):
-    """
-    Login endpoint using Firebase authentication.
-
-    Flow:
-    1. Client sends Firebase ID token
-    2. Backend verifies token via Firebase Admin SDK
-    3. Backend fetches or creates user in database
-    4. User info is returned to the client
-    """
+@router.post("/login")
+@limiter.limit("5/minute")
+async def login_with_firebase(
+    payload: TokenRequest,
+    request: Request,
+):
+    ip = request.client.host
 
     try:
-        user = verify_firebase_token_and_get_user(payload.id_token)
-        return user
+        return verify_firebase_token_and_get_user(payload.id_token)
 
-    except ValueError as e:
-        # Raised when token is invalid or expired
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e)
-        )
+    except HTTPException as e:
+        register_failed_attempt("unknown", ip)
+        raise e
 
     except Exception:
-        # Catch-all for unexpected server issues
+        register_failed_attempt("unknown", ip)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail="Authentication failed"
         )
 
 
 @router.get("/health")
 def auth_health_check():
-    """
-    Simple health check for auth routes.
-    Useful for testing if auth module is reachable.
-    """
     return {"status": "auth service running"}

@@ -14,6 +14,7 @@ import com.example.moonsyncapp.ui.screens.auth.WelcomeScreen
 import com.example.moonsyncapp.ui.screens.auth.SignUpScreen
 import com.example.moonsyncapp.ui.screens.auth.LoginScreen
 import com.example.moonsyncapp.ui.screens.auth.BirthdateScreen
+import com.example.moonsyncapp.ui.screens.auth.ForgotPasswordScreen
 
 // Setup Screens
 import com.example.moonsyncapp.ui.screens.setup.MedicationScreen
@@ -67,6 +68,10 @@ fun NavGraph(
 
         composable(Routes.LOGIN) {
             LoginScreen(navController = navController)
+        }
+
+        composable(Routes.FORGOT_PASSWORD) {
+            ForgotPasswordScreen(navController = navController)
         }
 
         // ==========================================
@@ -212,6 +217,7 @@ object Routes {
     const val WELCOME = "welcome"
     const val SIGNUP = "signup"
     const val LOGIN = "login"
+    const val FORGOT_PASSWORD = "forgot_password"
 
     // Setup
     const val BIRTHDATE = "birthdate"

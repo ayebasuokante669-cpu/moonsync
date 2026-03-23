@@ -13,6 +13,9 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import kotlin.random.Random
 import com.example.moonsyncapp.data.model.ReportReason
+import android.content.Context
+import com.example.moonsyncapp.util.AudioRecorder
+import com.example.moonsyncapp.util.AudioPlayer
 
 enum class ChatAuthor { USER, MOMO }
 
@@ -41,6 +44,7 @@ data class ChatUiState(
 )
 
 class MomoChatViewModel : ViewModel() {
+    private var audioRecorder: AudioRecorder? = null
 
     private val _uiState = MutableStateFlow(
         ChatUiState(
@@ -48,7 +52,7 @@ class MomoChatViewModel : ViewModel() {
                 ChatMessage(
                     id = "m1",
                     author = ChatAuthor.MOMO,
-                    text = "Hi, I’m Momo. Ask me anything about your cycle, symptoms, or wellbeing."
+                    text = "Hi, I’m Cyra. Ask me anything about your cycle, symptoms, or wellbeing."
                 ),
                 ChatMessage(
                     id = "m2",
@@ -61,6 +65,8 @@ class MomoChatViewModel : ViewModel() {
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
     private var recordingJob: Job? = null
+
+    val audioPlayer = AudioPlayer()
 
     // Track reported message IDs for duplicate prevention
     private val _reportedMessageIds = MutableStateFlow<Set<String>>(emptySet())
@@ -110,6 +116,55 @@ class MomoChatViewModel : ViewModel() {
                 recordingMs = 0L,
                 pendingAttachment = ChatAttachment.Audio(uri = null, durationMs = duration)
             )
+        }
+    }
+
+    /**
+     * Start real audio recording.
+     * Called after RECORD_AUDIO permission is granted.
+     */
+    fun startRealRecording(context: Context) {
+        if (_uiState.value.isRecording) return
+
+        audioRecorder = AudioRecorder(context)
+        val file = audioRecorder?.start()
+
+        if (file != null) {
+            _uiState.update { it.copy(isRecording = true, recordingMs = 0L) }
+
+            recordingJob?.cancel()
+            recordingJob = viewModelScope.launch {
+                while (_uiState.value.isRecording) {
+                    delay(100L)
+                    _uiState.update { state -> state.copy(recordingMs = state.recordingMs + 100L) }
+                }
+            }
+        }
+    }
+
+    /**
+     * Stop real audio recording and stage as pending attachment.
+     */
+    fun stopRealRecording() {
+        recordingJob?.cancel()
+        recordingJob = null
+
+        _uiState.update { it.copy(isRecording = false) }
+
+        val result = audioRecorder?.stop()
+        audioRecorder = null
+
+        if (result != null) {
+            val (file, durationMs) = result
+            _uiState.update {
+                it.copy(
+                    recordingMs = 0L,
+                    pendingAttachment = ChatAttachment.Audio(
+                        uri = Uri.fromFile(file),
+                        durationMs = durationMs
+                    )
+                )
+            }
         }
     }
 
@@ -174,6 +229,9 @@ class MomoChatViewModel : ViewModel() {
 
     override fun onCleared() {
         recordingJob?.cancel()
+        audioRecorder?.cancel()
+        audioRecorder = null
+        audioPlayer.release()
         super.onCleared()
     }
 

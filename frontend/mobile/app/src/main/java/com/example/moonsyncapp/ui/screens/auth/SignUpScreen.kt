@@ -30,6 +30,10 @@ import com.example.moonsyncapp.data.auth.AuthManager
 import com.example.moonsyncapp.navigation.Routes
 import com.example.moonsyncapp.ui.theme.MoonSyncTheme
 import kotlinx.coroutines.launch
+import com.example.moonsyncapp.util.PasswordValidator
+import com.example.moonsyncapp.util.PasswordValidationState
+import com.example.moonsyncapp.ui.components.PasswordValidationChecklist
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun SignUpScreen(navController: NavHostController) {
@@ -44,6 +48,7 @@ fun SignUpScreen(navController: NavHostController) {
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
+    val passwordValidationState = remember(password) { PasswordValidator.validate(password) }
     var acceptedTerms by remember { mutableStateOf(false) }
 
     // UI states
@@ -147,6 +152,14 @@ fun SignUpScreen(navController: NavHostController) {
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                 unfocusedBorderColor = MaterialTheme.colorScheme.outline
             )
+        )
+//     add checklist between password and confirm password:
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Password validation checklist
+        PasswordValidationChecklist(
+            validationState = passwordValidationState,
+            password = password
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -274,6 +287,7 @@ fun SignUpScreen(navController: NavHostController) {
                     password.isNotEmpty() &&
                     confirmPassword.isNotEmpty() &&
                     password == confirmPassword &&
+                    passwordValidationState.isValid &&
                     acceptedTerms &&
                     !isLoading,
             colors = ButtonDefaults.buttonColors(
@@ -350,30 +364,70 @@ fun SignUpScreen(navController: NavHostController) {
             }
 
             // Facebook
+//            OutlinedButton(
+//                onClick = { /* TODO: Facebook Sign Up */ },
+//                modifier = Modifier
+//                    .weight(1f)
+//                    .height(52.dp),
+//                enabled = !isLoading,
+//                shape = RoundedCornerShape(16.dp),
+//                border = ButtonDefaults.outlinedButtonBorder.copy(
+//                    brush = SolidColor(
+//                        MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+//                    )
+//                ),
+//                colors = ButtonDefaults.outlinedButtonColors(
+//                    contentColor = MaterialTheme.colorScheme.onBackground
+//                )
+//            ) {
+//                Icon(
+//                    painter = painterResource(id = R.drawable.ic_facebook),
+//                    contentDescription = "Facebook",
+//                    modifier = Modifier.size(20.dp),
+//                    tint = androidx.compose.ui.graphics.Color.Unspecified
+//                )
+//                Spacer(modifier = Modifier.width(8.dp))
+//                Text(text = "Facebook", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+//            }
+//          Instagram (Coming Soon - requires backend OAuth)
             OutlinedButton(
-                onClick = { /* TODO: Facebook Sign Up */ },
+                onClick = {
+                    // Instagram OAuth requires backend implementation
+                },
                 modifier = Modifier
                     .weight(1f)
                     .height(52.dp),
-                enabled = !isLoading,
+                enabled = false,
                 shape = RoundedCornerShape(16.dp),
                 border = ButtonDefaults.outlinedButtonBorder.copy(
                     brush = SolidColor(
-                        MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
                     )
                 ),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.onBackground
+                    disabledContainerColor = Color.Transparent,
+                    disabledContentColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                 )
             ) {
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_facebook),
-                    contentDescription = "Facebook",
+                    painter = painterResource(id = R.drawable.ic_instagram),
+                    contentDescription = "Instagram",
                     modifier = Modifier.size(20.dp),
-                    tint = androidx.compose.ui.graphics.Color.Unspecified
+                    tint = Color.Unspecified // Keep original Instagram colors
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = "Facebook", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                Column {
+                    Text(
+                        text = "Instagram",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "Coming Soon",
+                        fontSize = 9.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
             }
         }
 

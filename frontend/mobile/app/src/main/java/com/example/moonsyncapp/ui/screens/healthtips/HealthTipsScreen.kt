@@ -39,6 +39,7 @@ import kotlinx.coroutines.delay
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.example.moonsyncapp.navigation.Routes
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.statusBarsPadding
 
 // Health Tips specific colors
 object HealthTipsColors {
@@ -102,7 +103,7 @@ fun HealthTipsScreen(
     }
 
     Scaffold(
-        modifier = Modifier.safeDrawingPadding(), // FIXED: Changed from systemBarsPadding
+        modifier = Modifier.statusBarsPadding(), // FIXED: Changed from systemBarsPadding
         topBar = {
             TopAppBar(
                 title = {

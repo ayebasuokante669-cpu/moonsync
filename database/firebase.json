@@ -1,24 +1,9 @@
 {
-  "functions": {
-    "source": "functions",
-    "runtime": "nodejs24"
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   },
-  "emulators": {
-    "functions": {
-      "port": 5005
-    },
-    "ui": {
-      "enabled": true,
-      "port": 4001
-    }
+  "functions": {
+    "source": "functions"
   }
 }
-
-
-
-
-
-   
-
-
-
