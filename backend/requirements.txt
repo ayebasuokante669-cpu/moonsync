@@ -1,5 +1,8 @@
 fastapi
-uvicorn
-requests
-supabase
+uvicorn[standard]
 python-dotenv
+supabase
+requests
+slowapi
+firebase-admin
+python-jose

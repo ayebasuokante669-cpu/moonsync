@@ -2,7 +2,8 @@ import os
 import requests
 from app.ai.prompt import build_prompt
 from app.ai.mock import mock_response
-from app.ai.safety import safety_check
+from app.ai.safety import safety_check, emergency_response
+
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 
@@ -13,88 +14,147 @@ headers = {
 }
 
 
-# ✅ Emoji normalization
-def normalize_emojis(text: str) -> str:
-    emoji_map = {
-        # Sadness / distress
-        "😢": "feeling sad",
-        "😭": "feeling very sad and overwhelmed",
-        "😞": "feeling upset and disappointed",
-        "😔": "feeling down",
-        "🥺": "feeling vulnerable",
+# ---------------------------
+# RESPONSE CLEANER
+# ---------------------------
 
-        # Anger / frustration
-        "😡": "feeling angry",
-        "🤬": "feeling very angry",
-        "😤": "feeling frustrated",
-
-        # Anxiety / worry
-        "😰": "feeling anxious and worried",
-        "😨": "feeling scared",
-        "😟": "feeling concerned and uneasy",
-
-        # Happiness (could be genuine or sarcastic — add qualifier)
-        "😃": "feeling happy or upbeat",
-        "😊": "feeling warm and positive",
-        "🙂": "feeling okay or possibly sarcastic",
-        "😁": "feeling excited or possibly sarcastic",
-        "😂": "finding something funny or being sarcastic",
-        "🤣": "laughing hard or being sarcastic",
-        "😆": "amused or possibly sarcastic",
-
-        # Pain / discomfort
-        "🤢": "feeling nauseous",
-        "🤮": "feeling very sick",
-        "😣": "feeling pain or discomfort",
-        "😖": "feeling distressed and uncomfortable",
-        "🥴": "feeling dizzy or out of sorts",
-
-        # Confusion
-        "😕": "feeling confused",
-        "🤔": "thinking and unsure",
-        "😶": "feeling speechless or unsure how to express",
-
-        # Neutral / sarcastic risk
-        "😐": "feeling neutral or possibly unamused",
-        "🙄": "feeling annoyed or being sarcastic",
-        "😒": "feeling unimpressed or sarcastic",
-
-        # Positive health related
-        "💪": "feeling determined and strong",
-        "🙏": "feeling hopeful and grateful",
-        "❤️": "expressing care and love",
-        "💔": "feeling heartbroken or emotionally hurt",
-    }
-
-    for emoji, meaning in emoji_map.items():
-        text = text.replace(emoji, f" ({meaning}) ")
+def clean_response(text: str) -> str:
+    unwanted_phrases = [
+        "Key Points:",
+        "Note:",
+        "Explanation:",
+        "I provided",
+        "This response",
+        "The tone is"
+    ]
+    for phrase in unwanted_phrases:
+        if phrase in text:
+            text = text.split(phrase)[0].strip()
     return text
 
 
-def generate_reply(user_message: str, history=None):
-    # ✅ Normalize emojis
-    user_message = normalize_emojis(user_message)
+# ---------------------------
+# BASIC DETECTION HELPERS
+# ---------------------------
 
-    # ✅ SAFETY FIRST (before LLM)
+def is_greeting(message: str):
+    greetings = ["hi", "hello", "hey", "sup", "yo", "good morning", "good evening", "good day"]
+    msg = message.lower().strip()
+    return msg in greetings
+
+
+def is_casual_chat(message: str) -> bool:
+    casual = ["how are you", "how r u", "what's up", "whats up", "how's it going"]
+    msg = message.lower().strip()
+    return any(c in msg for c in casual)
+
+
+# ---------------------------
+# EMOTION SYSTEM
+# ---------------------------
+
+def detect_emotion_level(message: str) -> int:
+    msg = message.lower()
+
+    # 🔴 LEVEL 4 — CRITICAL
+    critical_patterns = [
+        "kill myself", "end my life", "i can't do this anymore",
+        "i want to die", "suicide"
+    ]
+    if any(p in msg for p in critical_patterns):
+        return 4
+
+    # 🔵 LEVEL 3 — HIGH EMOTION
+    high_words = [
+        "sad", "depressed", "terrible", "crying",
+        "hurt", "hopeless", "empty"
+    ]
+    high_emojis = ["💔", "😭", "😢", "😞", "😔"]
+
+    if any(w in msg for w in high_words) or any(e in message for e in high_emojis):
+        return 3
+
+    # 🟡 LEVEL 2 — MODERATE
+    moderate_words = [
+        "stressed", "worried", "tired", "overwhelmed", "anxious"
+    ]
+
+    sarcasm_patterns = ["😂", "😅", "🙂"]
+    negative_context = ["fine", "great", "okay"]
+
+    if any(w in msg for w in moderate_words):
+        return 2
+
+    if any(e in message for e in sarcasm_patterns) and any(n in msg for n in negative_context):
+        return 2
+
+    # ⚪ LEVEL 0 — DEFAULT
+    return 0
+
+
+# ---------------------------
+# MAIN GENERATION FUNCTION
+# ---------------------------
+
+def generate_reply(user_message: str):
+
+    # 1️⃣ SAFETY FIRST
     safety = safety_check(user_message)
     if safety:
         return safety
 
-    prompt = build_prompt(user_message)
+    # 2️⃣ GREETING (EARLY EXIT)
+    if is_greeting(user_message):
+        return {
+            "response": "Hey 😊 I'm Cyra. How can I help you today?",
+            "confidence": "high"
+        }
+
+    # 3️⃣ EMOTION DETECTION
+    level = detect_emotion_level(user_message)
+
+    # 🔴 LEVEL 4 — EMERGENCY
+    if level == 4:
+        return emergency_response()
+
+    # 🔵 LEVEL 3 — HIGH EMOTION
+    if level == 3:
+        return {
+            "response": "I'm really sorry you're feeling this way 💔 You don't have to go through it alone. Do you want to talk about what's going on?",
+            "confidence": "high"
+        }
+
+    # 🟡 LEVEL 2 — MODERATE
+    if level == 2:
+        prefix = "That can be really stressful sometimes "
+        prompt = build_prompt(prefix + user_message)
+
+    else:
+        # ⚪ LEVEL 0 — NORMAL
+        user_message = user_message + " Explain clearly in 2-4 simple sentences."
+        prompt = build_prompt(user_message)
+
+    # ---------------------------
+    # LLM CALL
+    # ---------------------------
 
     payload = {
         "inputs": prompt,
         "parameters": {
-            "max_new_tokens": 450,
+            "max_new_tokens": 350,
             "temperature": 0.5,
             "top_p": 0.9,
             "repetition_penalty": 1.15,
-            "do_sample": True
+            "do_sample": True,
+            "stop": ["\nUser:", "\nuser:", "User:", "user:", "\nAssistant:"]
         }
     }
 
     try:
         response = requests.post(API_URL, headers=headers, json=payload, timeout=180)
+
+        print("STATUS:", response.status_code)
+        print("RAW RESPONSE:", response.text)
 
         if response.status_code != 200:
             return mock_response()
@@ -108,24 +168,37 @@ def generate_reply(user_message: str, history=None):
         else:
             return mock_response()
 
-        # ✅ CLEAN OUTPUT
-        answer = text.split("Assistant:")[-1].strip()
-        answer = answer.split("\nassistant:")[0].strip()
-        answer = answer.split("\nUser:")[0].strip()
-        answer = answer.replace("\\n", "\n")
-        answer = answer.strip('"').strip()
+        # Normalize
+        text = text.replace("\\n", "\n")
 
-        # ✅ LOW CONFIDENCE GUARD
-        if len(answer) < 20:
-            return {
-                "response": "I’m not completely sure about that. It would be best to check with a healthcare professional.",
-                "confidence": "low"
-            }
+        # Extract response
+        if "Assistant:" in text:
+            answer = text.rsplit("Assistant:", 1)[-1]
+        elif "assistant:" in text:
+            answer = text.rsplit("assistant:", 1)[-1]
+        else:
+            answer = text
+
+        # Cut extra convo
+        if "User:" in answer:
+            answer = answer.split("User:")[0].strip()
+
+        if "\nUser:" in answer:
+            answer = answer.split("\nUser:")[0]
+
+        # Clean
+        answer = clean_response(answer.strip()).strip()
+
+        print("FINAL ANSWER:", answer)
 
         return {
             "response": answer,
             "confidence": "medium"
         }
 
-    except Exception:
+    except Exception as e:
+        print("LLM ERROR:", e)
         return mock_response()
+
+
+print("HF TOKEN:", HF_TOKEN)

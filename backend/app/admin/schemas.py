@@ -1,8 +1,3 @@
-"""
-Pydantic models used by admin routes.
-These define the structure of data sent to and from the admin endpoints.
-"""
-
 from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
@@ -17,14 +12,18 @@ class IssueReportOut(BaseModel):
     created_at: datetime
 
 
-class AdminActionOut(BaseModel):
-    id: UUID
-    admin_id: UUID
-    action_type: str
-    target_table: str
-    target_id: UUID
-    created_at: datetime
-
-
 class UpdateIssueStatus(BaseModel):
-    status: str  # open, resolved, rejected
+    status: str
+
+
+# OPTIONAL (for better typing later)
+
+class ArticleCreate(BaseModel):
+    title: str
+    content: str
+    category: str
+
+
+class NotificationCreate(BaseModel):
+    title: str
+    message: str
