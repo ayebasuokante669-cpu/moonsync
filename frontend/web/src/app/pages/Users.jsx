@@ -9,15 +9,6 @@ import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "../components/ui/dialog";
 
-const mockUsers = [
-  { id: 1, name: "Emma Johnson", email: "emma.j@example.com", status: "active", registered: "2024-01-15", lastActive: "2 hours ago", avatar: "EJ", isMedical: false },
-  { id: 2, name: "Dr. Sarah Williams", email: "sarah.w@example.com", status: "active", registered: "2024-02-20", lastActive: "1 day ago", avatar: "SW", isMedical: false },
-  { id: 3, name: "Olivia Brown", email: "olivia.b@example.com", status: "inactive", registered: "2023-12-10", lastActive: "1 week ago", avatar: "OB", isMedical: false },
-  { id: 4, name: "Ava Davis", email: "ava.d@example.com", status: "active", registered: "2024-03-05", lastActive: "30 minutes ago", avatar: "AD", isMedical: false },
-  { id: 5, name: "Mia Wilson", email: "mia.w@example.com", status: "banned", registered: "2023-11-22", lastActive: "2 weeks ago", avatar: "MW", isMedical: false },
-  { id: 6, name: "Dr. Isabella Moore", email: "isabella.m@example.com", status: "active", registered: "2024-01-30", lastActive: "5 hours ago", avatar: "IM", isMedical: true },
-];
-
 export function Users() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");

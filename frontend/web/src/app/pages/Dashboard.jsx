@@ -6,15 +6,6 @@ import { ActionButton } from "../components/admin/ActionButton";
 import { StatusBadge } from "../components/admin/StatusBadge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-const chartData = [
-  { id: "jan", name: "Jan", users: 1200, engagement: 850 },
-  { id: "feb", name: "Feb", users: 1890, engagement: 1240 },
-  { id: "mar", name: "Mar", users: 2100, engagement: 1450 },
-  { id: "apr", name: "Apr", users: 2780, engagement: 1890 },
-  { id: "may", name: "May", users: 3200, engagement: 2240 },
-  { id: "jun", name: "Jun", users: 3890, engagement: 2680 },
-];
-
 const initialRecentActivity = [
   { id: 1, type: "user", message: "New user registered: Emma Johnson", time: "2 minutes ago", status: "active", route: "/users" },
   { id: 2, type: "report", message: "Community post reported for review", time: "15 minutes ago", status: "flagged", route: "/community" },

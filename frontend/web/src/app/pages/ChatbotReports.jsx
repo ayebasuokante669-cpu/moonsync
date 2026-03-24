@@ -5,42 +5,6 @@ import { ActionButton } from "../components/admin/ActionButton";
 import { FilterBar } from "../components/admin/FilterBar";
 import { toast } from "sonner";
 
-const mockChatbotReports = [
-  {
-    id: 1,
-    user: "Emma Johnson",
-    flagReason: "Inappropriate response",
-    conversation: [
-      { role: "user", content: "I'm experiencing severe cramps, what should I do?" },
-      { role: "bot", content: "I'm here to help! Severe cramps can be managed with heat therapy, gentle exercise, and over-the-counter pain relief. However, if the pain is unbearable, please consult a healthcare professional." },
-    ],
-    timestamp: "2 hours ago",
-    status: "pending",
-  },
-  {
-    id: 2,
-    user: "Sarah Williams",
-    flagReason: "Medical misinformation",
-    conversation: [
-      { role: "user", content: "Can I use birth control to regulate my period?" },
-      { role: "bot", content: "Birth control can be used to regulate menstrual cycles, but this is a decision that should be made with your doctor. I recommend discussing your options with a healthcare provider." },
-    ],
-    timestamp: "5 hours ago",
-    status: "pending",
-  },
-  {
-    id: 3,
-    user: "Olivia Brown",
-    flagReason: "Unhelpful response",
-    conversation: [
-      { role: "user", content: "When is my next ovulation day?" },
-      { role: "bot", content: "Based on your cycle data, your next ovulation is estimated to be in 5 days. Remember that this is an estimate and actual timing may vary." },
-    ],
-    timestamp: "1 day ago",
-    status: "resolved",
-  },
-];
-
 export function ChatbotReports() {
   const [selectedReport, setSelectedReport] = useState(null);
   const [internalNote, setInternalNote] = useState("");

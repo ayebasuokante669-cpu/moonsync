@@ -8,42 +8,6 @@ import { useNavigate, useLocation, useSearchParams } from "react-router";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "../components/ui/dialog";
 import { ActionButton } from "../components/admin/ActionButton";
 
-const mockRequests = [
-  {
-    id: 1,
-    fullName: "Dr. Sarah Johnson",
-    email: "sarah.johnson@healthmail.com",
-    profession: "Gynecologist",
-    credentials: "MD, Board Certified OB/GYN",
-    licenseNumber: "GYN-12345-CA",
-    requestDate: "2024-02-15",
-    status: "pending",
-    documents: ["Medical License", "Board Certification"],
-  },
-  {
-    id: 2,
-    fullName: "Emily Rodriguez, RN",
-    email: "emily.rodriguez@nursecare.com",
-    profession: "Registered Nurse",
-    credentials: "RN, BSN",
-    licenseNumber: "RN-67890-NY",
-    requestDate: "2024-02-14",
-    status: "pending",
-    documents: ["Nursing License", "BSN Diploma"],
-  },
-  {
-    id: 3,
-    fullName: "Dr. Michael Chen",
-    email: "m.chen@medcenter.org",
-    profession: "Endocrinologist",
-    credentials: "MD, Endocrinology Specialist",
-    licenseNumber: "ENDO-54321-TX",
-    requestDate: "2024-02-13",
-    status: "approved",
-    documents: ["Medical License", "Specialty Certification"],
-  },
-];
-
 export function MedicalVerification() {
   const [requests, setRequests] = useState(mockRequests);
   const [selectedRequest, setSelectedRequest] = useState(null);

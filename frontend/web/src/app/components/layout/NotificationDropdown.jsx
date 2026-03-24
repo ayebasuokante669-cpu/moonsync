@@ -4,57 +4,6 @@ import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
 
-export const mockNotifications = [
-  {
-    id: 1,
-    type: "alert",
-    title: "New Flagged Content",
-    message: "Community post flagged for review by multiple users",
-    time: "2 minutes ago",
-    read: false,
-    actionable: true,
-    route: "/community",
-  },
-  {
-    id: 2,
-    type: "warning",
-    title: "High Severity Log Entry",
-    message: "Menstrual log flagged with severe pain indicators",
-    time: "15 minutes ago",
-    read: false,
-    actionable: true,
-    route: "/menstrual-logs",
-  },
-  {
-    id: 3,
-    type: "info",
-    title: "New User Registration",
-    message: "Dr. Sarah Johnson created an account",
-    time: "1 hour ago",
-    read: false,
-    actionable: true,
-    route: "/users",
-  },
-  {
-    id: 4,
-    type: "success",
-    title: "Article Published",
-    message: "Understanding Hormonal Changes article is now live",
-    time: "2 hours ago",
-    read: true,
-    route: "/articles",
-  },
-  {
-    id: 5,
-    type: "info",
-    title: "User Milestone Reached",
-    message: "Total users surpassed 4,000 mark",
-    time: "5 hours ago",
-    read: true,
-    route: "/users",
-  },
-];
-
 export function NotificationDropdown({ isOpen, onClose, notifications, setNotifications }) {
   const dropdownRef = useRef(null);
   const navigate = useNavigate();

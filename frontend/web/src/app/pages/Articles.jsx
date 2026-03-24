@@ -8,45 +8,6 @@ import { ChevronDown } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
-const mockArticles = [
-  {
-    id: 1,
-    title: "Understanding Your Menstrual Cycle",
-    category: "Symptoms",
-    status: "published",
-    author: "MoonSync Team",
-    publishDate: "2024-02-08",
-    views: 1240,
-  },
-  {
-    id: 2,
-    title: "Natural Remedies for Period Pain",
-    category: "Lifestyle",
-    status: "published",
-    author: "Dr. Sarah Johnson",
-    publishDate: "2024-02-10",
-    views: 856,
-  },
-  {
-    id: 3,
-    title: "Nutrition and Your Cycle: What to Eat",
-    category: "Nutrition",
-    status: "draft",
-    author: "MoonSync Team",
-    publishDate: null,
-    views: 0,
-  },
-  {
-    id: 4,
-    title: "Managing Stress During Your Cycle",
-    category: "Mental Health",
-    status: "published",
-    author: "Dr. Emily Chen",
-    publishDate: "2024-02-05",
-    views: 2103,
-  },
-];
-
 const GLOBAL_CATEGORIES = ["Nutrition", "Exercise", "Mental Health", "Symptoms", "Lifestyle"];
 
 export function Articles() {

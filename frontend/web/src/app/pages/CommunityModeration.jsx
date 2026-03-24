@@ -6,39 +6,6 @@ import { FilterBar } from "../components/admin/FilterBar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "../components/ui/dialog";
 import { toast } from "sonner";
 
-const mockReports = [
-  {
-    id: 1,
-    postContent: "Just started tracking my cycle with MoonSync! Any tips for beginners? 🌙",
-    author: "Emma Johnson",
-    reportedBy: "Sarah W.",
-    reason: "Spam",
-    severity: "low",
-    timestamp: "2 hours ago",
-    status: "pending",
-  },
-  {
-    id: 2,
-    postContent: "Does anyone else experience severe cramping? Looking for natural remedies...",
-    author: "Olivia Brown",
-    reportedBy: "Multiple users",
-    reason: "Medical misinformation",
-    severity: "high",
-    timestamp: "4 hours ago",
-    status: "flagged",
-  },
-  {
-    id: 3,
-    postContent: "Check out this product link for period pain relief! [spam link]",
-    author: "Mia Wilson",
-    reportedBy: "Ava D.",
-    reason: "Inappropriate content",
-    severity: "medium",
-    timestamp: "1 day ago",
-    status: "pending",
-  },
-];
-
 export function CommunityModeration() {
   const [selectedReport, setSelectedReport] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");

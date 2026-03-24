@@ -4,63 +4,6 @@ import { StatusBadge } from "../components/admin/StatusBadge";
 import { LogDetailDrawer } from "../components/admin/LogDetailDrawer";
 import { motion } from "motion/react";
 
-const mockFlaggedLogs = [
-  {
-    id: 1,
-    user: "Anonymous User 1",
-    userId: "ANON-001",
-    date: "2024-02-10",
-    snippet: "Experiencing unusual symptoms...",
-    flagReason: "Medical concern flagged by AI",
-    status: "pending",
-    severity: "medium",
-    timestamp: "2024-02-13 09:15",
-  },
-  {
-    id: 2,
-    user: "Anonymous User 2",
-    userId: "ANON-002",
-    date: "2024-02-09",
-    snippet: "Severe pain levels reported...",
-    flagReason: "High pain levels - potential health risk",
-    status: "pending",
-    severity: "high",
-    timestamp: "2024-02-12 16:42",
-  },
-  {
-    id: 3,
-    user: "Anonymous User 3",
-    userId: "ANON-003",
-    date: "2024-02-08",
-    snippet: "Irregular cycle pattern detected...",
-    flagReason: "Pattern anomaly detected",
-    status: "resolved",
-    severity: "low",
-    timestamp: "2024-02-11 11:20",
-  },
-  {
-    id: 4,
-    user: "Anonymous User 4",
-    userId: "ANON-004",
-    date: "2024-02-07",
-    snippet: "Extended bleeding duration...",
-    flagReason: "Prolonged cycle duration exceeds normal range",
-    status: "pending",
-    severity: "medium",
-    timestamp: "2024-02-10 14:05",
-  },
-  {
-    id: 5,
-    user: "Anonymous User 5",
-    userId: "ANON-005",
-    date: "2024-02-06",
-    snippet: "Multiple symptoms reported simultaneously...",
-    flagReason: "Complex symptom combination requires review",
-    status: "resolved",
-    severity: "high",
-    timestamp: "2024-02-09 10:30",
-  },
-];
 
 export function MenstrualLogs() {
   const [logs, setLogs] = useState(mockFlaggedLogs);
