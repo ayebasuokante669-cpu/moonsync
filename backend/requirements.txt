@@ -10,3 +10,4 @@ openai-whisper
 gTTS
 Pillow
 python-multipart
+email-validator
