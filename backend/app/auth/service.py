@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 
 from app.core.supabase import supabase
 from app.core.security import create_access_token, verify_token
-from app.auth.schemas import UserResponse
 from app.auth.roles import get_default_role
 
 

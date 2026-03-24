@@ -34,15 +34,12 @@ class UserCreate(UserBase):
 
 
 class UserResponse(UserBase):
-    """
-    Schema returned when user data is sent back to the client.
-    """
     id: str
     role: str
-    created_at: datetime
+    created_at: Optional[datetime] = None
 
     class Config:
-        from_attributes = True  # Allows ORM / DB model conversion
+        from_attributes = True
 
 class UserOut(BaseModel):
     """
