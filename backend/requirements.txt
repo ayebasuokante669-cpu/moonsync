@@ -5,6 +5,8 @@ supabase
 requests
 slowapi
 firebase-admin
-python-jose 
+python-jose
 openai-whisper
 gTTS
+Pillow
+python-multipart
