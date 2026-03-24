@@ -7,4 +7,4 @@ slowapi
 firebase-admin
 python-jose 
 openai-whisper
-pyttsx3
+gTTS
