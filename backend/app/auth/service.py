@@ -62,7 +62,7 @@ def reset_attempts(email: str):
 # VERIFY TOKEN + USER HANDLING
 # -------------------------------------------
 
-def verify_firebase_token_and_get_user(id_token: str) -> UserResponse:
+def verify_firebase_token_and_get_user(id_token: str) -> dict:
 
     try:
         decoded_token = firebase_auth.verify_id_token(id_token)
