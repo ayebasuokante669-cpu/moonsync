@@ -2,12 +2,15 @@ package com.example.moonsyncapp.ui.screens.archive
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.moonsyncapp.data.ApiClient
 import com.example.moonsyncapp.data.LoggingDataStore
 import com.example.moonsyncapp.data.model.*
 import com.example.moonsyncapp.ui.viewmodels.CalendarDisplayData
 import com.example.moonsyncapp.ui.viewmodels.CalendarViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -68,9 +71,27 @@ class ArchiveViewModel(
     private var cachedCalendarDisplayData: CalendarDisplayData? = null
     private var cachedCycleData: CycleData? = null
 
+    // Summary stats fetched from backend (supplements local logs)
+    private var backendSummaryJson: JSONObject? = null
+
     init {
         loadInitialData()
         observeCalendarData()
+        fetchBackendHistory()
+    }
+
+    private fun fetchBackendHistory() {
+        val uid = ApiClient.userId ?: return
+        viewModelScope.launch {
+            try {
+                val result = ApiClient.get("/history/$uid")
+                result.onSuccess { json ->
+                    backendSummaryJson = runCatching { JSONObject(json) }.getOrNull()
+                }
+            } catch (_: Exception) {
+                // Keep local data only
+            }
+        }
     }
 
     // ==================== DATA LOADING ====================

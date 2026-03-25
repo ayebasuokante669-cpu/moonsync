@@ -4,10 +4,11 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.delay
+import com.example.moonsyncapp.data.ApiClient
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import org.json.JSONObject
 
 private val Context.authDataStore: DataStore<Preferences> by preferencesDataStore(
     name = "auth_preferences"
@@ -134,54 +135,79 @@ suspend fun login(
         )
     }
 
-    delay(1000)
-
-    if (email.isEmpty()) {
-        return Result.failure(Exception("Email is required"))
-    }
-
-    if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-        return Result.failure(Exception("Invalid email format"))
-    }
-
-    if (password.isEmpty()) {
-        return Result.failure(Exception("Password is required"))
-    }
-
+    if (email.isEmpty()) return Result.failure(Exception("Email is required"))
+    if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) return Result.failure(Exception("Invalid email format"))
+    if (password.isEmpty()) return Result.failure(Exception("Password is required"))
     if (password.length < 6) {
-        // Record failed attempt for wrong password
         val locked = recordFailedAttempt()
-
         return if (locked) {
-            Result.failure(
-                LoginLockoutException(
-                    message = "Too many failed attempts. Account locked for 3 hours.",
-                    remainingMs = LOCKOUT_DURATION_MS
-                )
-            )
+            Result.failure(LoginLockoutException("Too many failed attempts. Account locked for 3 hours.", LOCKOUT_DURATION_MS))
         } else {
             val remaining = MAX_FAILED_ATTEMPTS - getFailedAttemptCount()
             Result.failure(Exception("Invalid credentials. $remaining attempt${if (remaining != 1) "s" else ""} remaining."))
         }
     }
 
-    // Successful login — reset failed attempts
-    resetFailedAttempts()
+    // Call real auth endpoint
+    return try {
+        val body = JSONObject().apply {
+            put("email", email)
+            put("password", password)
+        }
+        val result = ApiClient.post("/auth/login", body)
 
-    val user = User(
-        email = email,
-        token = "fake_token_${System.currentTimeMillis()}",
-        rememberMe = rememberMe
-    )
+        if (result.isSuccess) {
+            resetFailedAttempts()
 
-    dataStore.edit { preferences ->
-        preferences[IS_LOGGED_IN] = true
-        preferences[USER_EMAIL] = email
-        preferences[AUTH_TOKEN] = user.token
-        preferences[REMEMBER_ME] = rememberMe
+            val json = result.getOrThrow()
+            val obj = JSONObject(json)
+            val token = obj.optString("access_token").takeIf { it.isNotEmpty() }
+                ?: obj.optString("token").takeIf { it.isNotEmpty() }
+                ?: "token_${System.currentTimeMillis()}"
+            val uid = obj.optString("user_id").takeIf { it.isNotEmpty() }
+                ?: obj.optString("id").takeIf { it.isNotEmpty() }
+
+            // Store token globally for other API calls
+            ApiClient.authToken = token
+            ApiClient.userId = uid
+
+            val user = User(email = email, token = token, rememberMe = rememberMe)
+
+            dataStore.edit { preferences ->
+                preferences[IS_LOGGED_IN] = true
+                preferences[USER_EMAIL] = email
+                preferences[AUTH_TOKEN] = token
+                preferences[REMEMBER_ME] = rememberMe
+            }
+
+            Result.success(user)
+        } else {
+            val locked = recordFailedAttempt()
+            if (locked) {
+                Result.failure(LoginLockoutException("Too many failed attempts. Account locked for 3 hours.", LOCKOUT_DURATION_MS))
+            } else {
+                val remaining = MAX_FAILED_ATTEMPTS - getFailedAttemptCount()
+                Result.failure(Exception("Invalid credentials. $remaining attempt${if (remaining != 1) "s" else ""} remaining."))
+            }
+        }
+    } catch (e: Exception) {
+        Result.failure(Exception("Connection failed. Please try again."))
     }
+}
 
-    return Result.success(user)
+/**
+ * Restores auth token from DataStore into ApiClient on app restart.
+ * Call this once at startup (e.g., SplashScreen or MainActivity).
+ */
+suspend fun restoreSession() {
+    val prefs = dataStore.data.first()
+    val isLoggedIn = prefs[IS_LOGGED_IN] ?: false
+    if (isLoggedIn) {
+        val token = prefs[AUTH_TOKEN] ?: return
+        if (token.isNotEmpty()) {
+            ApiClient.authToken = token
+        }
+    }
 }
 
     suspend fun register(

@@ -132,24 +132,39 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.moonsyncapp.data.ApiClient
 import com.example.moonsyncapp.data.LoggingDataStore
 import com.example.moonsyncapp.data.model.CycleData
 import com.example.moonsyncapp.data.model.CyclePhase
 import com.example.moonsyncapp.data.model.LoggingStreak
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
 class CycleViewModel(
     private val loggingDataStore: LoggingDataStore
 ) : ViewModel() {
 
-    private val _cycleData = MutableStateFlow(getSampleCycleData())
+    private val _cycleData = MutableStateFlow(CycleData(
+        userName = "",
+        currentPhase = CyclePhase.FOLLICULAR,
+        cycleDay = 10,
+        cycleLength = 28,
+        daysUntilNextPeriod = 18,
+        daysUntilOvulation = 4,
+        periodDaysRemaining = null,
+        phaseProgress = 0.625f,
+        phaseDaysRemaining = 4,
+        phaseTotalDays = 9,
+        nextPeriodDate = java.time.LocalDate.now().plusDays(18),
+        ovulationDate = java.time.LocalDate.now().plusDays(4)
+    ))
     val cycleData: StateFlow<CycleData> = _cycleData.asStateFlow()
 
     private val _isRefreshing = MutableStateFlow(false)
@@ -165,14 +180,71 @@ class CycleViewModel(
     val cycleStreak: StateFlow<Int> = _cycleStreak.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            delay(1500)
-            _isLoading.value = false
-        }
-
-        // Load streak from LoggingDataStore
+        fetchCycleData()
         loadStreak()
+        checkNotifications()
     }
+
+    private fun checkNotifications() {
+        viewModelScope.launch {
+            try {
+                val result = ApiClient.get("/notifications/ping")
+                result.onSuccess { json ->
+                    val hasUnread = try {
+                        org.json.JSONObject(json).optBoolean("has_unread", true)
+                    } catch (_: Exception) { true }
+                    _hasUnreadNotifications.value = hasUnread
+                }
+            } catch (_: Exception) {
+                // Keep default (true) so badge shows until confirmed otherwise
+            }
+        }
+    }
+
+    private fun fetchCycleData(isRefresh: Boolean = false) {
+        viewModelScope.launch {
+            if (isRefresh) _isRefreshing.value = true else _isLoading.value = true
+            try {
+                val result = ApiClient.get("/cycle/preview")
+                result.onSuccess { json ->
+                    parseCyclePreview(json)?.let { _cycleData.value = it }
+                }
+                // On failure, sample data already in state — keep it
+            } catch (_: Exception) {
+                // Keep sample data
+            } finally {
+                if (isRefresh) _isRefreshing.value = false else _isLoading.value = false
+            }
+        }
+    }
+
+    private fun parseCyclePreview(json: String): CycleData? = try {
+        val obj = JSONObject(json)
+        val iso = DateTimeFormatter.ISO_LOCAL_DATE
+        val phaseStr = obj.optString("current_phase", "follicular").uppercase()
+        val phase = try { CyclePhase.valueOf(phaseStr) } catch (_: Exception) { CyclePhase.FOLLICULAR }
+        val nextPeriod = obj.optString("next_period_date").let {
+            if (it.isNotEmpty()) runCatching { LocalDate.parse(it, iso) }.getOrNull() else null
+        } ?: LocalDate.now().plusDays(obj.optInt("days_until_next_period", 18).toLong())
+        val ovulation = obj.optString("ovulation_date").let {
+            if (it.isNotEmpty()) runCatching { LocalDate.parse(it, iso) }.getOrNull() else null
+        } ?: LocalDate.now().plusDays(obj.optInt("days_until_ovulation", 4).toLong())
+
+        CycleData(
+            userName = obj.optString("user_name", "").ifEmpty { _cycleData.value.userName },
+            currentPhase = phase,
+            cycleDay = obj.optInt("cycle_day", _cycleData.value.cycleDay),
+            cycleLength = obj.optInt("cycle_length", _cycleData.value.cycleLength),
+            daysUntilNextPeriod = obj.optInt("days_until_next_period", _cycleData.value.daysUntilNextPeriod),
+            daysUntilOvulation = obj.optInt("days_until_ovulation", _cycleData.value.daysUntilOvulation),
+            periodDaysRemaining = obj.optInt("period_days_remaining", -1).takeIf { it >= 0 },
+            phaseProgress = obj.optDouble("phase_progress", _cycleData.value.phaseProgress.toDouble()).toFloat(),
+            phaseDaysRemaining = obj.optInt("phase_days_remaining", _cycleData.value.phaseDaysRemaining),
+            phaseTotalDays = obj.optInt("phase_total_days", _cycleData.value.phaseTotalDays),
+            nextPeriodDate = nextPeriod,
+            ovulationDate = ovulation
+        )
+    } catch (_: Exception) { null }
 
     private fun loadStreak() {
         viewModelScope.launch {
@@ -201,13 +273,9 @@ class CycleViewModel(
     }
 
     fun refresh() {
-        viewModelScope.launch {
-            _isRefreshing.value = true
-            delay(1200)
-            _cycleData.value = getSampleCycleData()
-            loadStreak() // Refresh streak too
-            _isRefreshing.value = false
-        }
+        fetchCycleData(isRefresh = true)
+        loadStreak()
+        checkNotifications()
     }
 
     fun markNotificationsRead() {
@@ -265,22 +333,6 @@ class CycleViewModel(
         }
     }
 
-    private fun getSampleCycleData(): CycleData {
-        return CycleData(
-            userName = "Ada",
-            currentPhase = CyclePhase.FOLLICULAR,
-            cycleDay = 10,
-            cycleLength = 28,
-            daysUntilNextPeriod = 18,
-            daysUntilOvulation = 4,
-            periodDaysRemaining = null,
-            phaseProgress = 0.625f,
-            phaseDaysRemaining = 4,
-            phaseTotalDays = 9,
-            nextPeriodDate = LocalDate.now().plusDays(18),
-            ovulationDate = LocalDate.now().plusDays(4)
-        )
-    }
 }
 
 data class NextEventInfo(

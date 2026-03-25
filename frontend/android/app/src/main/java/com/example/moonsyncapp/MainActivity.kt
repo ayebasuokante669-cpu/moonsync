@@ -69,6 +69,9 @@ class MainActivity : ComponentActivity() {
 
             // Load app state WHILE splash is showing
             LaunchedEffect(Unit) {
+                // Restore auth token so API calls work immediately after restart
+                authManager.restoreSession()
+
                 val onboardingCompleted = onboardingManager.isOnboardingCompleted.first()
                 val isLoggedIn = authManager.isUserLoggedIn()
 

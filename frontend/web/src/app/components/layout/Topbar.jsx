@@ -2,7 +2,7 @@ import { Search, Bell, Menu, User, FileText, Layout, X, Sun, Moon } from "lucide
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { NotificationDropdown, mockNotifications } from "./NotificationDropdown";
+import { NotificationDropdown } from "./NotificationDropdown";
 import { UserMenu } from "./UserMenu";
 import { useTheme } from "next-themes";
 
@@ -24,7 +24,7 @@ const globalSearchIndex = [
 
 export function Topbar({ onMenuClick }) {
   const [isNotificationDropdownOpen, setIsNotificationDropdownOpen] = useState(false);
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const [notifications, setNotifications] = useState([]);
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const [searchQuery, setSearchQuery] = useState("");

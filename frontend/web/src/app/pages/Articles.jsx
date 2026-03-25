@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Plus, Search, Edit, Trash2, Eye, Image as ImageIcon, Link as LinkIcon } from "lucide-react";
 import { StatusBadge } from "../components/admin/StatusBadge";
 import { ActionButton } from "../components/admin/ActionButton";
@@ -48,9 +48,12 @@ const mockArticles = [
 ];
 
 const GLOBAL_CATEGORIES = ["Nutrition", "Exercise", "Mental Health", "Symptoms", "Lifestyle"];
+const API_URL = import.meta.env.VITE_API_URL || "https://moonsync-production.up.railway.app";
 
 export function Articles() {
-  const [articles, setArticles] = useState(mockArticles);
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editingArticle, setEditingArticle] = useState(null);
   const [showEditor, setShowEditor] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -59,6 +62,35 @@ export function Articles() {
   const [formState, setFormState] = useState({ title: "", category: "Nutrition", content: "" });
   const [isPreview, setIsPreview] = useState(false);
   const textareaRef = useRef(null);
+  const token = localStorage.getItem("token") || "test";
+
+  useEffect(() => {
+    const fetchArticles = async () => {
+      try {
+        const res = await fetch(`${API_URL}/admin/articles`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const safe = Array.isArray(data) ? data : data.data || [];
+        setArticles(safe.map(a => ({
+          id: a.id,
+          title: a.title,
+          category: a.category || "Nutrition",
+          status: a.status || "draft",
+          author: a.author || "Admin",
+          publishDate: a.publish_date || a.publishDate || null,
+          views: a.views || 0,
+          content: a.content || "",
+        })));
+      } catch {
+        setArticles([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchArticles();
+  }, []);
   const filteredArticles = articles.filter((article) => {
     const matchesSearch = article.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = filterStatus ? article.status === filterStatus : true;
@@ -120,27 +152,71 @@ export function Articles() {
     }, 0);
   };
 
-  const handleSave = (status) => {
+  const handleEdit = (article) => {
+    setEditingArticle(article);
+    setFormState({ title: article.title, category: article.category, content: article.content || "" });
+    setShowEditor(true);
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await fetch(`${API_URL}/admin/articles/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setArticles(prev => prev.filter(a => a.id !== id));
+      toast.success("Article deleted");
+    } catch {
+      toast.error("Failed to delete article");
+    }
+  };
+
+  const handleSave = async (status) => {
     if (!formState.title.trim()) {
       toast.error("Article title is required.");
       return;
     }
-    
-    const newArticle = {
-      id: articles.length + 1,
-      title: formState.title,
-      category: formState.category,
-      status: status,
-      author: "Admin User",
-      publishDate: status === "published" ? new Date().toISOString().split('T')[0] : null,
-      views: 0,
-    };
-    
-    setArticles([newArticle, ...articles]);
-    toast.success(`Article successfully ${status === 'published' ? 'published' : 'saved as draft'}.`);
-    
-    // reset form
+
+    try {
+      if (editingArticle) {
+        const res = await fetch(`${API_URL}/admin/articles/${editingArticle.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ title: formState.title, category: formState.category, content: formState.content, status }),
+        });
+        if (!res.ok) throw new Error();
+        const updated = await res.json();
+        setArticles(prev => prev.map(a => a.id === editingArticle.id ? {
+          ...a, ...updated,
+          publishDate: updated.publish_date || updated.publishDate || a.publishDate,
+        } : a));
+        toast.success(`Article ${status === "published" ? "published" : "saved as draft"}.`);
+      } else {
+        const res = await fetch(`${API_URL}/admin/articles`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ title: formState.title, category: formState.category, content: formState.content, status }),
+        });
+        if (!res.ok) throw new Error();
+        const created = await res.json();
+        setArticles(prev => [{
+          id: created.id,
+          title: created.title || formState.title,
+          category: created.category || formState.category,
+          status: created.status || status,
+          author: created.author || "Admin",
+          publishDate: created.publish_date || created.publishDate || (status === "published" ? new Date().toISOString().split("T")[0] : null),
+          views: 0,
+          content: formState.content,
+        }, ...prev]);
+        toast.success(`Article successfully ${status === "published" ? "published" : "saved as draft"}.`);
+      }
+    } catch {
+      toast.error("Failed to save article");
+    }
+
     setFormState({ title: "", category: "Nutrition", content: "" });
+    setEditingArticle(null);
     setShowEditor(false);
   };
 
@@ -168,6 +244,7 @@ export function Articles() {
       />
 
       {/* Articles Grid */}
+      {loading && <p className="text-sm text-[var(--color-muted-foreground)]">Loading articles...</p>}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filteredArticles.map((article) => (
           <div
@@ -212,11 +289,11 @@ export function Articles() {
 
               {/* Actions */}
               <div className="flex gap-2 mt-auto">
-                <button className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm font-medium text-foreground hover:bg-[var(--color-muted)] transition-smooth">
+                <button onClick={() => handleEdit(article)} className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm font-medium text-foreground hover:bg-[var(--color-muted)] transition-smooth">
                   <Edit className="h-4 w-4" />
                   Edit
                 </button>
-                <button className="flex items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm font-medium text-[var(--color-error)] hover:bg-[var(--color-error-light)] transition-smooth">
+                <button onClick={() => handleDelete(article.id)} className="flex items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm font-medium text-[var(--color-error)] hover:bg-[var(--color-error-light)] transition-smooth">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
@@ -227,14 +304,14 @@ export function Articles() {
 
       {/* Article Editor Modal */}
       {showEditor && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setShowEditor(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => { setShowEditor(false); setEditingArticle(null); }}>
           <div
             className="w-full max-w-3xl rounded-xl bg-[var(--color-card)] shadow-xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Editor Header */}
             <div className="border-b border-[var(--color-border)] bg-[var(--color-secondary-bg)] px-6 py-4">
-              <h3 className="text-lg font-semibold text-foreground">Create New Article</h3>
+              <h3 className="text-lg font-semibold text-foreground">{editingArticle ? "Edit Article" : "Create New Article"}</h3>
               <p className="text-sm text-[var(--color-muted-foreground)]">Write and publish educational content</p>
             </div>
 
@@ -371,7 +448,7 @@ export function Articles() {
 
             {/* Editor Footer */}
             <div className="flex items-center justify-end gap-3 border-t border-[var(--color-border)] bg-[var(--color-secondary-bg)] px-6 py-4">
-              <ActionButton variant="ghost" onClick={() => setShowEditor(false)}>
+              <ActionButton variant="ghost" onClick={() => { setShowEditor(false); setEditingArticle(null); }}>
                 Cancel
               </ActionButton>
               <ActionButton variant="secondary" onClick={() => handleSave("draft")}>

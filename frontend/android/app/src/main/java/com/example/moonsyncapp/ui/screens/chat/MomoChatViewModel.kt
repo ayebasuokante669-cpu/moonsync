@@ -10,9 +10,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Instant
-import kotlin.random.Random
+import com.example.moonsyncapp.data.ApiClient
 import com.example.moonsyncapp.data.model.ReportReason
+import java.time.Instant
+import org.json.JSONObject
 import android.content.Context
 import com.example.moonsyncapp.util.AudioRecorder
 import com.example.moonsyncapp.util.AudioPlayer
@@ -191,39 +192,53 @@ class MomoChatViewModel : ViewModel() {
             )
         }
 
-        // Frontend-only fake reply (backend can replace later)
+        // Call POST /ai/chat — typing animation shown while waiting
         viewModelScope.launch {
-            delay(850)
-            val reply = ChatMessage(
-                id = "m_${System.currentTimeMillis()}",
-                author = ChatAuthor.MOMO,
-                text = generateMomoReply(outgoing)
-            )
-            _uiState.update { state ->
-                state.copy(
-                    isMomoTyping = false,
-                    messages = state.messages + reply
+            try {
+                val hasImage = outgoing.attachments.any { it is ChatAttachment.Image }
+                val hasAudio = outgoing.attachments.any { it is ChatAttachment.Audio }
+
+                val messageText = when {
+                    hasImage -> outgoing.text ?: "Image attached"
+                    hasAudio -> outgoing.text ?: "Voice message"
+                    else -> outgoing.text ?: ""
+                }
+
+                val body = JSONObject().apply {
+                    put("message", messageText)
+                    ApiClient.userId?.let { put("user_id", it) }
+                }
+
+                val result = ApiClient.post("/ai/chat", body)
+
+                val replyText = result.fold(
+                    onSuccess = { json ->
+                        try {
+                            val obj = JSONObject(json)
+                            obj.optString("reply").takeIf { it.isNotEmpty() }
+                                ?: obj.optString("message").takeIf { it.isNotEmpty() }
+                                ?: obj.optString("response").takeIf { it.isNotEmpty() }
+                                ?: "I’m here to help. What would you like to know?"
+                        } catch (e: Exception) {
+                            "I’m here to help. What would you like to know?"
+                        }
+                    },
+                    onFailure = {
+                        "I’m having trouble connecting right now. Please try again."
+                    }
                 )
+
+                val reply = ChatMessage(
+                    id = "m_${System.currentTimeMillis()}",
+                    author = ChatAuthor.MOMO,
+                    text = replyText
+                )
+                _uiState.update { state ->
+                    state.copy(isMomoTyping = false, messages = state.messages + reply)
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isMomoTyping = false) }
             }
-        }
-    }
-
-    private fun generateMomoReply(userMsg: ChatMessage): String {
-        val hasImage = userMsg.attachments.any { it is ChatAttachment.Image }
-        val hasAudio = userMsg.attachments.any { it is ChatAttachment.Audio }
-
-        return when {
-            hasImage ->
-                "I got your photo. Tell me what you want me to check in it."
-            hasAudio ->
-                "I received your voice note. If you can, summarize the main point in one sentence too."
-            else ->
-                listOf(
-                    "Thanks for sharing. Want to tell me which day of your cycle you’re on?",
-                    "Got it. Rate the intensity from 1–10 so we can track patterns.",
-                    "Noted. If this is new or severe, consider checking in with a clinician.",
-                    "I can help you spot patterns—does this happen before, during, or after your period?"
-                )[Random.nextInt(4)]
         }
     }
 

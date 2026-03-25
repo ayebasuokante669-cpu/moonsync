@@ -2,12 +2,13 @@ package com.example.moonsyncapp.ui.screens.community
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.moonsyncapp.data.ApiClient
 import com.example.moonsyncapp.data.model.*
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -138,7 +139,6 @@ class CommunityViewModel : ViewModel() {
     private fun loadInitialData() {
         viewModelScope.launch {
             _isLoading.value = true
-            delay(800)
 
             _posts.value = getMockPosts()
             _groups.value = getMockGroups()
@@ -170,7 +170,6 @@ class CommunityViewModel : ViewModel() {
     fun refresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            delay(1000)
             _posts.value = getMockPosts().shuffled()
             refreshFilteredPosts()
             _isRefreshing.value = false
@@ -245,7 +244,7 @@ class CommunityViewModel : ViewModel() {
                     _currentUser.value
                 },
                 content = content,
-                imageUrl = null,  // No image support yet
+                imageUrl = null,
                 createdAt = LocalDateTime.now(),
                 ageRestriction = ageRestriction,
                 category = category,
@@ -258,12 +257,23 @@ class CommunityViewModel : ViewModel() {
 
             _posts.value = listOf(newPost) + _posts.value
             _showCreatePostSheet.value = false
-
             refreshFilteredPosts()
 
-            // Increment community streak for posting
-            incrementStreak(StreakType.COMMUNITY)
+            // POST to backend
+            try {
+                val body = JSONObject().apply {
+                    put("content", content)
+                    put("category", category.name.lowercase())
+                    put("is_anonymous", isAnonymous)
+                    phaseTag?.let { put("phase_tag", it.name.lowercase()) }
+                    ApiClient.userId?.let { put("user_id", it) }
+                }
+                ApiClient.post("/community/posts", body)
+            } catch (_: Exception) {
+                // Post already added locally — backend sync is best-effort
+            }
 
+            incrementStreak(StreakType.COMMUNITY)
             awardPoints(10, "Created a post")
         }
     }

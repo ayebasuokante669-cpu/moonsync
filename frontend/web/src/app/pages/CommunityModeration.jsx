@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+const API_URL = import.meta.env.VITE_API_URL || "https://moonsync-production.up.railway.app";
 import { Search, AlertTriangle, Check, Trash2, MessageCircle } from "lucide-react";
 import { StatusBadge } from "../components/admin/StatusBadge";
 import { ActionButton } from "../components/admin/ActionButton";
@@ -40,14 +42,45 @@ const mockReports = [
 ];
 
 export function CommunityModeration() {
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedReport, setSelectedReport] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
 
   const [actionModal, setActionModal] = useState({ isOpen: false, type: null, report: null });
   const [warningMessage, setWarningMessage] = useState("");
+  const token = localStorage.getItem("token") || "test";
 
-  const filteredReports = mockReports.filter((report) => {
+  useEffect(() => {
+    const fetchIssues = async () => {
+      try {
+        const res = await fetch(`${API_URL}/admin/issues`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const safe = Array.isArray(data) ? data : data.data || [];
+        setReports(safe.map(r => ({
+          id: r.id,
+          postContent: r.content || r.post_content || r.postContent || "",
+          author: r.author || r.author_name || "Unknown",
+          reportedBy: r.reported_by || r.reportedBy || "Unknown",
+          status: r.status || "pending",
+          severity: r.severity || "low",
+          reason: r.reason || "",
+          timestamp: r.created_at || r.timestamp || "",
+        })));
+      } catch {
+        setReports([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchIssues();
+  }, []);
+
+  const filteredReports = reports.filter((report) => {
     const matchesSearch = report.postContent.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           report.author.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = filterStatus ? filterStatus === "resolved" ? report.status === "resolved" : report.status !== "resolved" : true;
@@ -63,26 +96,39 @@ export function CommunityModeration() {
     }
   ];
 
-  const executeAction = () => {
+  const executeAction = async () => {
     const { type, report } = actionModal;
-    
-    switch (type) {
-      case "approve":
+
+    if (type === "warn" && !warningMessage.trim()) {
+      toast.error("Warning message cannot be empty");
+      return;
+    }
+
+    try {
+      const statusMap = { approve: "resolved", delete: "deleted", warn: "warned" };
+      await fetch(`${API_URL}/admin/issues/${report.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          status: statusMap[type],
+          ...(type === "warn" && { message: warningMessage }),
+        }),
+      });
+
+      if (type === "approve") {
+        setReports(prev => prev.map(r => r.id === report.id ? { ...r, status: "resolved" } : r));
         toast.success(`Post by ${report.author} has been approved.`);
-        break;
-      case "delete":
+      } else if (type === "delete") {
+        setReports(prev => prev.filter(r => r.id !== report.id));
         toast.error(`Post by ${report.author} has been deleted.`);
-        break;
-      case "warn":
-        if (!warningMessage.trim()) {
-          toast.error("Warning message cannot be empty");
-          return;
-        }
+      } else if (type === "warn") {
         toast.success(`Warning sent to ${report.author}`);
         setWarningMessage("");
-        break;
+      }
+    } catch {
+      toast.error("Action failed");
     }
-    
+
     setActionModal({ isOpen: false, type: null, report: null });
   };
 
@@ -107,6 +153,7 @@ export function CommunityModeration() {
       />
 
       {/* Reports List */}
+      {loading && <p className="text-sm text-[var(--color-muted-foreground)]">Loading reports...</p>}
       {filteredReports.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 text-center bg-[var(--color-card)] rounded-xl border border-[var(--color-border)]">
           <div className="h-16 w-16 rounded-full bg-[var(--color-secondary-bg)] flex items-center justify-center mb-4">

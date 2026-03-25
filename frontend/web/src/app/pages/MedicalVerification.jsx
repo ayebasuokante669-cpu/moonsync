@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+
+const API_URL = import.meta.env.VITE_API_URL || "https://moonsync-production.up.railway.app";
 import { Search, CheckCircle, XCircle, Shield, Mail, User, FileText, Clock, Filter, ChevronDown, AlertCircle, Upload, Trash2, Eye } from "lucide-react";
 import { StatusBadge } from "../components/admin/StatusBadge";
 import { Modal } from "../components/admin/Modal";
@@ -45,13 +47,15 @@ const mockRequests = [
 ];
 
 export function MedicalVerification() {
-  const [requests, setRequests] = useState(mockRequests);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [actionNotes, setActionNotes] = useState("");
+  const token = localStorage.getItem("token") || "test";
   
   // Document Upload State
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -64,6 +68,36 @@ export function MedicalVerification() {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchVerifications = async () => {
+      try {
+        const res = await fetch(`${API_URL}/admin/medical-verifications`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const safe = Array.isArray(data) ? data : data.data || [];
+        setRequests(safe.map(r => ({
+          id: r.id,
+          fullName: r.full_name || r.fullName || "Unknown",
+          email: r.email || "",
+          profession: r.profession || "",
+          credentials: r.credentials || "",
+          licenseNumber: r.license_number || r.licenseNumber || "",
+          requestDate: r.request_date || r.requestDate || "",
+          status: r.status || "pending",
+          notes: r.notes || "",
+          documents: r.documents || [],
+        })));
+      } catch {
+        setRequests([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchVerifications();
+  }, []);
 
   useEffect(() => {
     // Intercept new request from Users.jsx Modal
@@ -102,13 +136,19 @@ export function MedicalVerification() {
     setIsModalOpen(true);
   };
 
-  const handleApprove = (id) => {
-    setRequests(requests.map(req =>
-      req.id === id ? { ...req, status: "approved" } : req
-    ));
-    toast.success("Medical professional verified successfully", {
-      description: `${selectedRequest?.fullName} can now post with verified badge`,
-    });
+  const handleApprove = async (id) => {
+    try {
+      await fetch(`${API_URL}/admin/medical-verifications/${id}/approve`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setRequests(prev => prev.map(req => req.id === id ? { ...req, status: "approved" } : req));
+      toast.success("Medical professional verified successfully", {
+        description: `${selectedRequest?.fullName} can now post with verified badge`,
+      });
+    } catch {
+      toast.error("Failed to approve verification");
+    }
     setIsModalOpen(false);
   };
 
@@ -121,40 +161,50 @@ export function MedicalVerification() {
     setIsModalOpen(false);
   };
 
-  const handleReject = (id) => {
+  const handleReject = async (id) => {
     if (!actionNotes.trim()) {
       toast.error("Please provide a reason for rejection");
       return;
     }
-    setRequests(requests.map(req =>
-      req.id === id ? { ...req, status: "rejected", notes: actionNotes } : req
-    ));
-    toast.warning("Verification request rejected", {
-      description: `${selectedRequest?.fullName} has been notified`,
-    });
+    try {
+      await fetch(`${API_URL}/admin/medical-verifications/${id}/revoke`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setRequests(prev => prev.map(req => req.id === id ? { ...req, status: "rejected", notes: actionNotes } : req));
+      toast.warning("Verification request rejected", {
+        description: `${selectedRequest?.fullName} has been notified`,
+      });
+    } catch {
+      toast.error("Failed to reject verification");
+    }
     setIsModalOpen(false);
   };
   
-  const executeAdminAction = () => {
+  const executeAdminAction = async () => {
     const { type, request } = actionModal;
-    
-    switch (type) {
-      case "revoke":
-        setRequests(requests.map(req => req.id === request.id ? { ...req, status: "rejected", notes: "Approval revoked by admin" } : req));
+
+    try {
+      if (type === "revoke") {
+        await fetch(`${API_URL}/admin/medical-verifications/${request.id}/revoke`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setRequests(prev => prev.map(req => req.id === request.id ? { ...req, status: "rejected", notes: "Approval revoked by admin" } : req));
         toast.warning(`Approval revoked for ${request.fullName}`);
-        break;
-      case "suspend":
-        setRequests(requests.map(req => req.id === request.id ? { ...req, status: "pending", notes: "Account suspended pending administrative review" } : req));
+      } else if (type === "suspend") {
+        setRequests(prev => prev.map(req => req.id === request.id ? { ...req, status: "pending", notes: "Account suspended pending administrative review" } : req));
         toast.warning(`${request.fullName}'s account has been suspended`);
-        break;
-      case "delete":
-        setRequests(requests.filter(req => req.id !== request.id));
+      } else if (type === "delete") {
+        setRequests(prev => prev.filter(req => req.id !== request.id));
         toast.error(`Account for ${request.fullName} deleted permanently`);
-        break;
+      }
+    } catch {
+      toast.error("Action failed");
     }
-    
+
     setActionModal({ isOpen: false, type: null, request: null });
-    setIsModalOpen(false); // Close the detail drawer as well if it's open
+    setIsModalOpen(false);
   };
 
   const handleFileChange = (e) => {
@@ -273,6 +323,7 @@ export function MedicalVerification() {
       </div>
 
       {/* Requests Table */}
+      {loading && <p className="text-sm text-[var(--color-muted-foreground)]">Loading verifications...</p>}
       <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] overflow-hidden">
         <div className="hidden lg:grid bg-[var(--color-secondary-bg)] border-b border-[var(--color-border)] px-6 py-3 grid-cols-12 gap-4 text-xs font-semibold text-[var(--color-muted-foreground)] uppercase tracking-wide">
           <div className="col-span-3">Professional</div>
