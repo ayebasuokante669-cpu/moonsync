@@ -176,11 +176,24 @@ def delete_notification(notification_id: UUID):
 # ANALYTICS
 # =========================
 
-def get_dashboard_stats():
-    users = supabase.table("users").select("*", count="exact").execute()
-    articles = supabase.table("articles").select("*", count="exact").execute()
+# def get_dashboard_stats():
+#     users = supabase.table("users").select("*", count="exact").execute()
+#     articles = supabase.table("articles").select("*", count="exact").execute()
 
+#     return {
+#         "total_users": users.count,
+#         "total_articles": articles.count
+#     }
+
+def get_dashboard_stats():
     return {
-        "total_users": users.count,
-        "total_articles": articles.count
+        "total_users": 100,
+        "active_users": 80,
+        "chatbot_conversations": 50,
+        "community_posts": 20,
+        "user_growth": [
+            {"name": "Jan", "users": 10, "engagement": 5},
+            {"name": "Feb", "users": 20, "engagement": 10},
+            {"name": "Mar", "users": 30, "engagement": 15},
+        ]
     }
