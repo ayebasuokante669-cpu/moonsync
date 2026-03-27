@@ -3,7 +3,6 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     kotlin("plugin.serialization") version "1.9.22"
-    id("com.google.gms.google-services")
 }
 
 android {
@@ -93,13 +92,6 @@ dependencies {
 
     // Coil for image loading (profile photo)
     implementation("io.coil-kt:coil-compose:2.5.0")
-
-    // Firebase
-    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
-    implementation("com.google.firebase:firebase-auth-ktx")
-
-    // Google Sign-in
-    implementation("com.google.android.gms:play-services-auth:21.2.0")
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
 

@@ -3,14 +3,16 @@ package com.example.moonsyncapp.ui.screens.community
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.moonsyncapp.data.model.*
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.flow.update
@@ -138,9 +140,8 @@ class CommunityViewModel : ViewModel() {
     private fun loadInitialData() {
         viewModelScope.launch {
             _isLoading.value = true
-            delay(800)
 
-            _posts.value = getMockPosts()
+            _posts.value = fetchPostsFromApi()
             _groups.value = getMockGroups()
             _localCircles.value = getMockLocalCircles()
             _verifiedProfessionals.value = getMockProfessionals()
@@ -170,8 +171,7 @@ class CommunityViewModel : ViewModel() {
     fun refresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
-            delay(1000)
-            _posts.value = getMockPosts().shuffled()
+            _posts.value = fetchPostsFromApi()
             refreshFilteredPosts()
             _isRefreshing.value = false
         }
@@ -1047,173 +1047,153 @@ class CommunityViewModel : ViewModel() {
         )
     }
 
-    private fun getMockPosts(): List<CommunityPost> {
-        val drAmara = CommunityUser(
-            id = "user_doc",
-            displayName = "Dr. Amara O.",
-            identityMode = IdentityMode.REAL_NAME,
-            currentPhase = null,
-            currentMood = null,
-            wisdomLevel = WisdomLevel.WISE_TREE,
-            isVerifiedProfessional = true,
-            professionalTitle = "Gynecologist",
-            joinedDate = LocalDateTime.now().minusYears(1),
-            localCircle = "Lagos"
-        )
+    private suspend fun fetchPostsFromApi(): List<CommunityPost> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val url = java.net.URL("https://moonsync-production.up.railway.app/community/posts")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.requestMethod = "GET"
+                conn.setRequestProperty("Accept", "application/json")
+                conn.connectTimeout = 15000
+                conn.readTimeout = 15000
 
-        val anonymousUser = CommunityUser(
-            id = "user_anon_1",
-            displayName = "Luna #4829",
-            identityMode = IdentityMode.ANONYMOUS,
-            currentPhase = CyclePhase.MENSTRUAL,
-            currentMood = UserMood.TIRED,
-            wisdomLevel = WisdomLevel.SPROUT,
-            isVerifiedProfessional = false,
-            professionalTitle = null,
-            joinedDate = LocalDateTime.now().minusMonths(1),
-            localCircle = null
-        )
+                if (conn.responseCode == 200) {
+                    val response = conn.inputStream.bufferedReader(Charsets.UTF_8).readText()
+                    parsePostsJson(response)
+                } else {
+                    emptyList()
+                }
+            } catch (e: Exception) {
+                emptyList()
+            }
+        }
+    }
 
-        val regularUser = CommunityUser(
-            id = "user_reg_1",
-            displayName = "MoonChild",
-            identityMode = IdentityMode.PSEUDONYM,
-            currentPhase = CyclePhase.OVULATION,
-            currentMood = UserMood.GREAT,
-            wisdomLevel = WisdomLevel.FLOURISHING,
-            isVerifiedProfessional = false,
-            professionalTitle = null,
-            joinedDate = LocalDateTime.now().minusMonths(6),
-            localCircle = "London"
-        )
+    private fun parsePostsJson(json: String): List<CommunityPost> {
+        return try {
+            val array = org.json.JSONArray(json)
+            val posts = mutableListOf<CommunityPost>()
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                posts.add(parsePost(obj))
+            }
+            posts
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 
-        return listOf(
-            CommunityPost(
-                id = "post_1",
-                author = drAmara,
-                content = "Managing Iron Levels During Your Period 🩸\n\nDuring menstruation, you lose iron through blood loss. Here are evidence-based tips to maintain healthy iron levels:\n\n1. Pair iron-rich foods with vitamin C\n2. Avoid coffee/tea with meals\n3. Consider iron supplements if heavy flow\n4. Dark leafy greens are your friend!\n\nAlways consult your healthcare provider before starting supplements.",
-                imageUrl = null,
-                createdAt = LocalDateTime.now().minusHours(2),
-                ageRestriction = AgeRestriction.ALL_AGES,
-                category = PostCategory.PROFESSIONAL,
-                phaseTag = CyclePhase.MENSTRUAL,
-                reactions = listOf(
-                    PostReaction(ReactionType.HELPFUL, 234, false),
-                    PostReaction(ReactionType.WISDOM, 156, false),
-                    PostReaction(ReactionType.LOVE, 89, false),
-                    PostReaction(ReactionType.HUG, 45, false),
-                    PostReaction(ReactionType.RELATE, 23, false),
-                    PostReaction(ReactionType.STRENGTH, 12, false),
-                    PostReaction(ReactionType.MOONBEAM, 8, false)
-                ),
-                commentCount = 67,
-                isPromotedToArticle = true
-            ),
-            CommunityPost(
-                id = "post_2",
-                author = anonymousUser,
-                content = "First time experiencing really painful cramps and I don't know what to do 😔 My mom never talked about this stuff. Any tips from you lovely people?",
-                imageUrl = null,
-                createdAt = LocalDateTime.now().minusHours(5),
-                ageRestriction = AgeRestriction.ALL_AGES,
-                category = PostCategory.SUPPORT,
-                phaseTag = CyclePhase.MENSTRUAL,
-                reactions = listOf(
-                    PostReaction(ReactionType.HUG, 189, false),
-                    PostReaction(ReactionType.RELATE, 156, false),
-                    PostReaction(ReactionType.STRENGTH, 78, false),
-                    PostReaction(ReactionType.LOVE, 45, false),
-                    PostReaction(ReactionType.HELPFUL, 0, false),
-                    PostReaction(ReactionType.WISDOM, 0, false),
-                    PostReaction(ReactionType.MOONBEAM, 0, false)
-                ),
-                commentCount = 89
-            ),
-            CommunityPost(
-                id = "post_3",
-                author = regularUser,
-                content = "Just discovered that tracking my energy levels alongside my cycle has been a GAME CHANGER! 📊✨\n\nDuring follicular phase, I schedule all my big meetings and workouts. During luteal, I give myself permission to slow down.\n\nAnyone else sync their life to their cycle?",
-                imageUrl = null,
-                createdAt = LocalDateTime.now().minusHours(8),
-                ageRestriction = AgeRestriction.ALL_AGES,
-                category = PostCategory.TIP,
-                phaseTag = CyclePhase.FOLLICULAR,
-                reactions = listOf(
-                    PostReaction(ReactionType.WISDOM, 312, false),
-                    PostReaction(ReactionType.RELATE, 234, false),
-                    PostReaction(ReactionType.HELPFUL, 189, false),
-                    PostReaction(ReactionType.LOVE, 67, false),
-                    PostReaction(ReactionType.HUG, 23, false),
-                    PostReaction(ReactionType.STRENGTH, 12, false),
-                    PostReaction(ReactionType.MOONBEAM, 45, false)
-                ),
-                commentCount = 56,
-                isPromotedToArticle = false
-            ),
-            CommunityPost(
-                id = "post_4",
-                author = CommunityUser(
-                    id = "user_4",
-                    displayName = "WellnessWarrior",
-                    identityMode = IdentityMode.PSEUDONYM,
-                    currentPhase = CyclePhase.LUTEAL,
-                    currentMood = UserMood.PEACEFUL,
-                    wisdomLevel = WisdomLevel.BLOOMING,
-                    isVerifiedProfessional = false,
-                    professionalTitle = null,
-                    joinedDate = LocalDateTime.now().minusMonths(4),
-                    localCircle = "New York"
-                ),
-                content = "🎉 6 months of tracking complete! 🎉\n\nI finally understand my body and can predict exactly when I need to rest. This app and this community have been so supportive. Thank you all! 💜",
-                imageUrl = null,
-                createdAt = LocalDateTime.now().minusHours(12),
-                ageRestriction = AgeRestriction.ALL_AGES,
-                category = PostCategory.CELEBRATION,
-                phaseTag = null,
-                reactions = listOf(
-                    PostReaction(ReactionType.LOVE, 456, false),
-                    PostReaction(ReactionType.HUG, 234, false),
-                    PostReaction(ReactionType.MOONBEAM, 189, false),
-                    PostReaction(ReactionType.STRENGTH, 67, false),
-                    PostReaction(ReactionType.RELATE, 45, false),
-                    PostReaction(ReactionType.WISDOM, 23, false),
-                    PostReaction(ReactionType.HELPFUL, 12, false)
-                ),
-                commentCount = 78
-            ),
-            CommunityPost(
-                id = "post_5",
-                author = CommunityUser(
-                    id = "user_5",
-                    displayName = "Luna #7392",
-                    identityMode = IdentityMode.ANONYMOUS,
-                    currentPhase = CyclePhase.OVULATION,
-                    currentMood = UserMood.ANXIOUS,
-                    wisdomLevel = WisdomLevel.SEEDLING,
-                    isVerifiedProfessional = false,
-                    professionalTitle = null,
-                    joinedDate = LocalDateTime.now().minusWeeks(2),
-                    localCircle = null
-                ),
-                content = "Has anyone else noticed their anxiety peaks during ovulation? I always thought it would be PMS but apparently it can happen mid-cycle too? 😰",
-                imageUrl = null,
-                createdAt = LocalDateTime.now().minusHours(18),
-                ageRestriction = AgeRestriction.ALL_AGES,
-                category = PostCategory.QUESTION,
-                phaseTag = CyclePhase.OVULATION,
-                reactions = listOf(
-                    PostReaction(ReactionType.RELATE, 267, false),
-                    PostReaction(ReactionType.HUG, 189, false),
-                    PostReaction(ReactionType.HELPFUL, 45, false),
-                    PostReaction(ReactionType.LOVE, 23, false),
-                    PostReaction(ReactionType.WISDOM, 12, false),
-                    PostReaction(ReactionType.STRENGTH, 8, false),
-                    PostReaction(ReactionType.MOONBEAM, 5, false)
-                ),
-                commentCount = 43
-            )
+    private fun parsePost(obj: org.json.JSONObject): CommunityPost {
+        val authorObj = obj.optJSONObject("author")
+        val author = if (authorObj != null) parseUser(authorObj) else defaultAnonymousUser()
+
+        val createdAtStr = obj.optString("created_at", "")
+        val createdAt = try {
+            LocalDateTime.parse(createdAtStr, DateTimeFormatter.ISO_DATE_TIME)
+        } catch (e: Exception) {
+            LocalDateTime.now()
+        }
+
+        val categoryStr = obj.optString("category", "DISCUSSION")
+        val category = try { PostCategory.valueOf(categoryStr) } catch (e: Exception) { PostCategory.DISCUSSION }
+
+        val ageStr = obj.optString("age_restriction", "ALL_AGES")
+        val ageRestriction = try { AgeRestriction.valueOf(ageStr) } catch (e: Exception) { AgeRestriction.ALL_AGES }
+
+        val phaseStr = obj.optString("phase_tag", "")
+        val phaseTag = if (phaseStr.isNotBlank()) {
+            try { CyclePhase.valueOf(phaseStr) } catch (e: Exception) { null }
+        } else null
+
+        val reactionsArray = obj.optJSONArray("reactions")
+        val reactions = if (reactionsArray != null) {
+            parseReactions(reactionsArray)
+        } else {
+            ReactionType.values().map { PostReaction(it, 0, false) }
+        }
+
+        return CommunityPost(
+            id = obj.optString("id", "post_${System.currentTimeMillis()}"),
+            author = author,
+            content = obj.optString("content", ""),
+            imageUrl = obj.optString("image_url", "").takeIf { it.isNotBlank() },
+            createdAt = createdAt,
+            ageRestriction = ageRestriction,
+            category = category,
+            phaseTag = phaseTag,
+            reactions = reactions,
+            commentCount = obj.optInt("comment_count", 0),
+            isPromotedToArticle = obj.optBoolean("is_promoted_to_article", false),
+            isAutoHidden = obj.optBoolean("is_auto_hidden", false)
         )
     }
+
+    private fun parseUser(obj: org.json.JSONObject): CommunityUser {
+        val identityStr = obj.optString("identity_mode", "ANONYMOUS")
+        val identityMode = try { IdentityMode.valueOf(identityStr) } catch (e: Exception) { IdentityMode.ANONYMOUS }
+
+        val phaseStr = obj.optString("current_phase", "")
+        val currentPhase = if (phaseStr.isNotBlank()) {
+            try { CyclePhase.valueOf(phaseStr) } catch (e: Exception) { null }
+        } else null
+
+        val moodStr = obj.optString("current_mood", "")
+        val currentMood = if (moodStr.isNotBlank()) {
+            try { UserMood.valueOf(moodStr) } catch (e: Exception) { null }
+        } else null
+
+        val wisdomStr = obj.optString("wisdom_level", "SEEDLING")
+        val wisdomLevel = try { WisdomLevel.valueOf(wisdomStr) } catch (e: Exception) { WisdomLevel.SEEDLING }
+
+        val joinedStr = obj.optString("joined_date", "")
+        val joinedDate = try {
+            LocalDateTime.parse(joinedStr, DateTimeFormatter.ISO_DATE_TIME)
+        } catch (e: Exception) {
+            LocalDateTime.now()
+        }
+
+        return CommunityUser(
+            id = obj.optString("id", "user_unknown"),
+            displayName = obj.optString("display_name", "Anonymous"),
+            identityMode = identityMode,
+            currentPhase = currentPhase,
+            currentMood = currentMood,
+            wisdomLevel = wisdomLevel,
+            isVerifiedProfessional = obj.optBoolean("is_verified_professional", false),
+            professionalTitle = obj.optString("professional_title", "").takeIf { it.isNotBlank() },
+            joinedDate = joinedDate,
+            localCircle = obj.optString("local_circle", "").takeIf { it.isNotBlank() }
+        )
+    }
+
+    private fun parseReactions(array: org.json.JSONArray): List<PostReaction> {
+        val parsed = mutableListOf<PostReaction>()
+        for (i in 0 until array.length()) {
+            val obj = array.getJSONObject(i)
+            val typeStr = obj.optString("type", "")
+            val type = try { ReactionType.valueOf(typeStr) } catch (e: Exception) { null } ?: continue
+            parsed.add(PostReaction(type, obj.optInt("count", 0), obj.optBoolean("has_user_reacted", false)))
+        }
+        // Fill in any missing reaction types with zero count
+        val presentTypes = parsed.map { it.type }.toSet()
+        ReactionType.values().filter { it !in presentTypes }.forEach {
+            parsed.add(PostReaction(it, 0, false))
+        }
+        return parsed
+    }
+
+    private fun defaultAnonymousUser() = CommunityUser(
+        id = "user_anon",
+        displayName = "Anonymous",
+        identityMode = IdentityMode.ANONYMOUS,
+        currentPhase = null,
+        currentMood = null,
+        wisdomLevel = WisdomLevel.SEEDLING,
+        isVerifiedProfessional = false,
+        professionalTitle = null,
+        joinedDate = LocalDateTime.now(),
+        localCircle = null
+    )
 
     private fun getMockPhaseRooms(): List<PhaseRoom> {
         return listOf(

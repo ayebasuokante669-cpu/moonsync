@@ -4,13 +4,11 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 private val Context.authDataStore: DataStore<Preferences> by preferencesDataStore(
     name = "auth_preferences"
@@ -78,45 +76,6 @@ class AuthManager(private val context: Context) {
         return if (rememberMe) prefs[USER_EMAIL] else null
     }
 
-//    suspend fun login(
-//        email: String,
-//        password: String,
-//        rememberMe: Boolean
-//    ): Result<User> {
-//        delay(1000)
-//
-//        if (email.isEmpty()) {
-//            return Result.failure(Exception("Email is required"))
-//        }
-//
-//        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-//            return Result.failure(Exception("Invalid email format"))
-//        }
-//
-//        if (password.isEmpty()) {
-//            return Result.failure(Exception("Password is required"))
-//        }
-//
-//        if (password.length < 6) {
-//            return Result.failure(Exception("Password must be at least 6 characters"))
-//        }
-//
-//        val user = User(
-//            email = email,
-//            token = "fake_token_${System.currentTimeMillis()}",
-//            rememberMe = rememberMe
-//        )
-//
-//        // ✅ FIX: Always save login state (Remember Me only controls email auto-fill)
-//        dataStore.edit { preferences ->
-//            preferences[IS_LOGGED_IN] = true
-//            preferences[USER_EMAIL] = email
-//            preferences[AUTH_TOKEN] = user.token
-//            preferences[REMEMBER_ME] = rememberMe
-//        }
-//
-//        return Result.success(user)
-//    }
 suspend fun login(
     email: String,
     password: String,
@@ -128,7 +87,6 @@ suspend fun login(
         val remainingMinutes = (remainingMs / 1000 / 60).toInt()
         val hours = remainingMinutes / 60
         val minutes = remainingMinutes % 60
-
         return Result.failure(
             LoginLockoutException(
                 message = "Too many failed attempts. Try again in ${hours}h ${minutes}m",
@@ -137,54 +95,63 @@ suspend fun login(
         )
     }
 
-    delay(1000)
-
-    if (email.isEmpty()) {
-        return Result.failure(Exception("Email is required"))
-    }
-
+    if (email.isEmpty()) return Result.failure(Exception("Email is required"))
     if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
         return Result.failure(Exception("Invalid email format"))
     }
+    if (password.isEmpty()) return Result.failure(Exception("Password is required"))
 
-    if (password.isEmpty()) {
-        return Result.failure(Exception("Password is required"))
-    }
+    return try {
+        withContext(Dispatchers.IO) {
+            val url = java.net.URL("https://moonsync-production.up.railway.app/auth/login")
+            val conn = url.openConnection() as java.net.HttpURLConnection
+            conn.requestMethod = "POST"
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.doOutput = true
+            conn.connectTimeout = 15000
+            conn.readTimeout = 15000
 
-    if (password.length < 6) {
-        // Record failed attempt for wrong password
-        val locked = recordFailedAttempt()
+            val emailEscaped = email.replace("\"", "\\\"")
+            val passwordEscaped = password.replace("\"", "\\\"")
+            val body = """{"email":"$emailEscaped","password":"$passwordEscaped"}"""
+            conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
 
-        return if (locked) {
-            Result.failure(
-                LoginLockoutException(
-                    message = "Too many failed attempts. Account locked for 3 hours.",
-                    remainingMs = LOCKOUT_DURATION_MS
-                )
-            )
-        } else {
-            val remaining = MAX_FAILED_ATTEMPTS - getFailedAttemptCount()
-            Result.failure(Exception("Invalid credentials. $remaining attempt${if (remaining != 1) "s" else ""} remaining."))
+            val responseCode = conn.responseCode
+            if (responseCode == 200) {
+                val response = conn.inputStream.bufferedReader(Charsets.UTF_8).readText()
+                val json = org.json.JSONObject(response)
+                val token = json.optString("access_token", "")
+
+                resetFailedAttempts()
+
+                val user = User(email = email, token = token, rememberMe = rememberMe)
+                dataStore.edit { preferences ->
+                    preferences[IS_LOGGED_IN] = true
+                    preferences[USER_EMAIL] = email
+                    preferences[AUTH_TOKEN] = token
+                    preferences[REMEMBER_ME] = rememberMe
+                }
+                Result.success(user)
+            } else {
+                val locked = recordFailedAttempt()
+                if (locked) {
+                    Result.failure(
+                        LoginLockoutException(
+                            message = "Too many failed attempts. Account locked for 3 hours.",
+                            remainingMs = LOCKOUT_DURATION_MS
+                        )
+                    )
+                } else {
+                    val remaining = MAX_FAILED_ATTEMPTS - getFailedAttemptCount()
+                    Result.failure(Exception("Invalid credentials. $remaining attempt${if (remaining != 1) "s" else ""} remaining."))
+                }
+            }
         }
+    } catch (e: LoginLockoutException) {
+        throw e
+    } catch (e: Exception) {
+        Result.failure(Exception("Network error. Please check your connection and try again."))
     }
-
-    // Successful login — reset failed attempts
-    resetFailedAttempts()
-
-    val user = User(
-        email = email,
-        token = "fake_token_${System.currentTimeMillis()}",
-        rememberMe = rememberMe
-    )
-
-    dataStore.edit { preferences ->
-        preferences[IS_LOGGED_IN] = true
-        preferences[USER_EMAIL] = email
-        preferences[AUTH_TOKEN] = user.token
-        preferences[REMEMBER_ME] = rememberMe
-    }
-
-    return Result.success(user)
 }
 
     suspend fun register(
@@ -271,32 +238,6 @@ suspend fun login(
         // Email doesn't match — in production, you'd still return success
         // to prevent email enumeration. But since this is mock:
         return Result.failure(Exception("No account found with this email address"))
-    }
-
-    suspend fun signInWithGoogle(idToken: String): Result<User> {
-        return try {
-            val credential = GoogleAuthProvider.getCredential(idToken, null)
-            val auth = FirebaseAuth.getInstance()
-            val authResult = auth.signInWithCredential(credential).await()
-            val firebaseUser = authResult.user
-                ?: return Result.failure(Exception("Google sign-in failed: no user returned"))
-
-            val user = User(
-                email = firebaseUser.email ?: "",
-                token = firebaseUser.uid
-            )
-
-            dataStore.edit { preferences ->
-                preferences[IS_LOGGED_IN] = true
-                preferences[USER_EMAIL] = user.email
-                preferences[AUTH_TOKEN] = user.token
-                preferences[REMEMBER_ME] = true
-            }
-
-            Result.success(user)
-        } catch (e: Exception) {
-            Result.failure(Exception("Google sign-in failed: ${e.message}"))
-        }
     }
 
     suspend fun logout() {

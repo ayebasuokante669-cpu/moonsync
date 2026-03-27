@@ -3,6 +3,7 @@ package com.example.moonsyncapp.ui.screens.chat
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,8 +11,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Instant
-import kotlin.random.Random
 import com.example.moonsyncapp.data.model.ReportReason
 import android.content.Context
 import com.example.moonsyncapp.util.AudioRecorder
@@ -191,13 +192,12 @@ class MomoChatViewModel : ViewModel() {
             )
         }
 
-        // Frontend-only fake reply (backend can replace later)
         viewModelScope.launch {
-            delay(850)
+            val replyText = fetchCyraReply(outgoing)
             val reply = ChatMessage(
                 id = "m_${System.currentTimeMillis()}",
                 author = ChatAuthor.MOMO,
-                text = generateMomoReply(outgoing)
+                text = replyText
             )
             _uiState.update { state ->
                 state.copy(
@@ -208,22 +208,54 @@ class MomoChatViewModel : ViewModel() {
         }
     }
 
-    private fun generateMomoReply(userMsg: ChatMessage): String {
+    private suspend fun fetchCyraReply(userMsg: ChatMessage): String {
         val hasImage = userMsg.attachments.any { it is ChatAttachment.Image }
         val hasAudio = userMsg.attachments.any { it is ChatAttachment.Audio }
 
-        return when {
-            hasImage ->
-                "I got your photo. Tell me what you want me to check in it."
-            hasAudio ->
-                "I received your voice note. If you can, summarize the main point in one sentence too."
-            else ->
-                listOf(
-                    "Thanks for sharing. Want to tell me which day of your cycle you’re on?",
-                    "Got it. Rate the intensity from 1–10 so we can track patterns.",
-                    "Noted. If this is new or severe, consider checking in with a clinician.",
-                    "I can help you spot patterns—does this happen before, during, or after your period?"
-                )[Random.nextInt(4)]
+        val inputText = when {
+            hasImage -> "User shared an image. ${userMsg.text?.let { "They said: $it" } ?: "Please acknowledge the image."}"
+            hasAudio -> "User sent a voice note. ${userMsg.text?.let { "They said: $it" } ?: "Please acknowledge the audio."}"
+            else -> userMsg.text ?: "Hello"
+        }
+
+        return withContext(Dispatchers.IO) {
+            try {
+                val url = java.net.URL("https://qt3vdzu4nu7ochkh.us-east-1.aws.endpoints.huggingface.cloud")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.doOutput = true
+                conn.connectTimeout = 30000
+                conn.readTimeout = 30000
+
+                val escaped = inputText.replace("\\", "\\\\").replace("\"", "\\\"")
+                val body = """{"inputs":"$escaped"}"""
+                conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+
+                val responseCode = conn.responseCode
+                if (responseCode == 200) {
+                    val response = conn.inputStream.bufferedReader(Charsets.UTF_8).readText()
+                    parseHuggingFaceResponse(response)
+                        ?: "I’m here for you. Could you tell me more?"
+                } else {
+                    "I’m having trouble connecting right now. Please try again."
+                }
+            } catch (e: Exception) {
+                "I’m having trouble connecting right now. Please try again."
+            }
+        }
+    }
+
+    private fun parseHuggingFaceResponse(response: String): String? {
+        return try {
+            val arr = org.json.JSONArray(response)
+            arr.getJSONObject(0).optString("generated_text", "").takeIf { it.isNotBlank() }
+        } catch (_: Exception) {
+            try {
+                org.json.JSONObject(response).optString("generated_text", "").takeIf { it.isNotBlank() }
+            } catch (_: Exception) {
+                response.trim().takeIf { it.isNotBlank() && it.length < 2000 }
+            }
         }
     }
 
