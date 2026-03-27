@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "254388021244",
+    "project_id": "moonsync-app-1ef83",
+    "storage_bucket": "moonsync-app-1ef83.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:254388021244:android:340e91ecd2b66cffe3f479",
+        "android_client_info": {
+          "package_name": "com.example.moonsyncapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJgAE1EdkHFk2ocrHlKVQrn9kQ2JKOwaQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

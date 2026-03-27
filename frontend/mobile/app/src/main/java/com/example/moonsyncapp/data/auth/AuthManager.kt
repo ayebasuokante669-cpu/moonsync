@@ -4,10 +4,13 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.tasks.await
 
 private val Context.authDataStore: DataStore<Preferences> by preferencesDataStore(
     name = "auth_preferences"
@@ -268,6 +271,32 @@ suspend fun login(
         // Email doesn't match — in production, you'd still return success
         // to prevent email enumeration. But since this is mock:
         return Result.failure(Exception("No account found with this email address"))
+    }
+
+    suspend fun signInWithGoogle(idToken: String): Result<User> {
+        return try {
+            val credential = GoogleAuthProvider.getCredential(idToken, null)
+            val auth = FirebaseAuth.getInstance()
+            val authResult = auth.signInWithCredential(credential).await()
+            val firebaseUser = authResult.user
+                ?: return Result.failure(Exception("Google sign-in failed: no user returned"))
+
+            val user = User(
+                email = firebaseUser.email ?: "",
+                token = firebaseUser.uid
+            )
+
+            dataStore.edit { preferences ->
+                preferences[IS_LOGGED_IN] = true
+                preferences[USER_EMAIL] = user.email
+                preferences[AUTH_TOKEN] = user.token
+                preferences[REMEMBER_ME] = true
+            }
+
+            Result.success(user)
+        } catch (e: Exception) {
+            Result.failure(Exception("Google sign-in failed: ${e.message}"))
+        }
     }
 
     suspend fun logout() {
