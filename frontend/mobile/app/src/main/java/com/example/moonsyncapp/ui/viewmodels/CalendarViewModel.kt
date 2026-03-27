@@ -1,8 +1,8 @@
 package com.example.moonsyncapp.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
+import com.example.moonsyncapp.data.CycleRepository
 import com.example.moonsyncapp.data.model.CycleData
-import com.example.moonsyncapp.data.model.CyclePhase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,26 +31,7 @@ class CalendarViewModel : ViewModel() {
     // MOCK DATA - Backend replaces this section
     // ========================================
 
-    private fun getMockCycleData(): CycleData {
-        val today = LocalDate.now()
-        val nextPeriod = today.plusDays(8)
-        val ovulation = today.plusDays(1)
-
-        return CycleData(
-            userName = "User",
-            currentPhase = CyclePhase.FOLLICULAR,
-            cycleDay = 12,
-            cycleLength = 28,
-            daysUntilNextPeriod = 8,
-            daysUntilOvulation = 1,
-            periodDaysRemaining = null,
-            phaseProgress = 0.6f,
-            phaseDaysRemaining = 2,
-            phaseTotalDays = 5,
-            nextPeriodDate = nextPeriod,
-            ovulationDate = ovulation
-        )
-    }
+    private fun getMockCycleData(): CycleData = CycleRepository.getCycleData()
 
     private fun getMockCalendarDisplayData(cycleData: CycleData): CalendarDisplayData {
         val today = LocalDate.now()

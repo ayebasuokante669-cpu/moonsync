@@ -132,6 +132,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.moonsyncapp.data.CycleRepository
 import com.example.moonsyncapp.data.LoggingDataStore
 import com.example.moonsyncapp.data.model.CycleData
 import com.example.moonsyncapp.data.model.CyclePhase
@@ -141,7 +142,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 import java.time.LocalTime
 import java.time.temporal.ChronoUnit
 
@@ -149,7 +149,7 @@ class CycleViewModel(
     private val loggingDataStore: LoggingDataStore
 ) : ViewModel() {
 
-    private val _cycleData = MutableStateFlow(getSampleCycleData())
+    private val _cycleData = MutableStateFlow(CycleRepository.getCycleData())
     val cycleData: StateFlow<CycleData> = _cycleData.asStateFlow()
 
     private val _isRefreshing = MutableStateFlow(false)
@@ -204,7 +204,7 @@ class CycleViewModel(
         viewModelScope.launch {
             _isRefreshing.value = true
             delay(1200)
-            _cycleData.value = getSampleCycleData()
+            _cycleData.value = CycleRepository.getCycleData()
             loadStreak() // Refresh streak too
             _isRefreshing.value = false
         }
@@ -265,22 +265,6 @@ class CycleViewModel(
         }
     }
 
-    private fun getSampleCycleData(): CycleData {
-        return CycleData(
-            userName = "Ada",
-            currentPhase = CyclePhase.FOLLICULAR,
-            cycleDay = 10,
-            cycleLength = 28,
-            daysUntilNextPeriod = 18,
-            daysUntilOvulation = 4,
-            periodDaysRemaining = null,
-            phaseProgress = 0.625f,
-            phaseDaysRemaining = 4,
-            phaseTotalDays = 9,
-            nextPeriodDate = LocalDate.now().plusDays(18),
-            ovulationDate = LocalDate.now().plusDays(4)
-        )
-    }
 }
 
 data class NextEventInfo(

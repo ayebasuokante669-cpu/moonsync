@@ -190,6 +190,7 @@ fun HomeScreen(
                             greetingEmoji = viewModel.getGreetingEmoji(),
                             userName = cycleData.userName,
                             currentPhase = cycleData.currentPhase,
+                            phaseDaysElapsed = cycleData.phaseTotalDays - cycleData.phaseDaysRemaining,
                             cycleStreak = cycleStreak,
                             hasUnreadNotifications = hasUnreadNotifications,
                             collapseProgress = headerCollapseProgress,
@@ -319,6 +320,7 @@ private fun CollapsingHeaderSection(
     greetingEmoji: String,
     userName: String,
     currentPhase: CyclePhase,
+    phaseDaysElapsed: Int,
     cycleStreak: Int,
     hasUnreadNotifications: Boolean,
     collapseProgress: Float,
@@ -368,7 +370,7 @@ private fun CollapsingHeaderSection(
                     )
                     if (collapseProgress < 0.3f) {
                         Text(
-                            text = " • 🔥 $cycleStreak day${if (cycleStreak != 1) "s" else ""}",
+                            text = " • $phaseDaysElapsed day${if (phaseDaysElapsed != 1) "s" else ""}",
                             fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
