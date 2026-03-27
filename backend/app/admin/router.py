@@ -13,6 +13,17 @@ from app.core.database import get_db
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
+@router.get("/stats")
+def get_stats(
+    db = Depends(get_db),
+    current_user = Depends(require_admin)
+):
+    """
+    Returns platform-wide counts for the admin dashboard.
+    """
+    return service.get_stats(db)
+
+
 @router.get("/issues", response_model=list[IssueReportOut])
 def get_issues(
     db = Depends(get_db),

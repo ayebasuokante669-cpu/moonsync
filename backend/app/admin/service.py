@@ -194,6 +194,45 @@ def delete_notification(db, notification_id: UUID):
         .execute()
 
 """
+Dashboard statistics: counts of users, chatbot sessions, and community posts.
+"""
+def get_stats(db):
+    """
+    Returns platform-wide statistics for the admin dashboard.
+    """
+    try:
+        total_users_res = db.table("users").select("*", count="exact").execute()
+        total_users = total_users_res.count or 0
+    except Exception:
+        total_users = 0
+
+    try:
+        active_users_res = db.table("users").select("*", count="exact").eq("status", "active").execute()
+        active_users = active_users_res.count or 0
+    except Exception:
+        active_users = 0
+
+    try:
+        chatbot_res = db.table("chat_sessions").select("*", count="exact").execute()
+        chatbot_conversations = chatbot_res.count or 0
+    except Exception:
+        chatbot_conversations = 0
+
+    try:
+        posts_res = db.table("community_posts").select("*", count="exact").execute()
+        community_posts = posts_res.count or 0
+    except Exception:
+        community_posts = 0
+
+    return {
+        "total_users": total_users,
+        "active_users": active_users,
+        "chatbot_conversations": chatbot_conversations,
+        "community_posts": community_posts,
+    }
+
+
+"""
 Require admin role for all admin services.
 This is a simple wrapper to ensure that only admins can call these functions.
 """

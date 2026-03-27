@@ -5,6 +5,7 @@ import { StatsCard } from "../components/admin/StatsCard";
 import { ActionButton } from "../components/admin/ActionButton";
 import { StatusBadge } from "../components/admin/StatusBadge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { api } from "../lib/api";
 
 const chartData = [
   { id: "jan", name: "Jan", users: 1200, engagement: 850 },
@@ -30,9 +31,16 @@ export function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const activityRef = useRef(null);
-  
+
   const [activities, setActivities] = useState(initialRecentActivity);
   const [showAllActivity, setShowAllActivity] = useState(false);
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    api.get("/admin/stats")
+      .then(setStats)
+      .catch(() => {});
+  }, []);
 
   // Auto-clear activities older than 24 hours on mount
   useEffect(() => {
@@ -68,28 +76,28 @@ export function Dashboard() {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Total Users"
-          value="3,890"
+          value={stats ? stats.total_users.toLocaleString() : "—"}
           icon={Users}
           trend={{ value: "12.5%", isPositive: true }}
           description="from last month"
         />
         <StatsCard
           title="Active Users"
-          value="2,680"
+          value={stats ? stats.active_users.toLocaleString() : "—"}
           icon={Activity}
           trend={{ value: "8.2%", isPositive: true }}
           description="from last month"
         />
         <StatsCard
           title="Chatbot Conversations"
-          value="1,247"
+          value={stats ? stats.chatbot_conversations.toLocaleString() : "—"}
           icon={MessageSquare}
           trend={{ value: "3.1%", isPositive: false }}
           description="today"
         />
         <StatsCard
           title="Community Posts"
-          value="428"
+          value={stats ? stats.community_posts.toLocaleString() : "—"}
           icon={FileText}
           trend={{ value: "15.3%", isPositive: true }}
           description="today"
