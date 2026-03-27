@@ -1,8 +1,5 @@
 package com.example.moonsyncapp.ui.screens.auth
 
-import android.app.Activity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -18,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -431,14 +427,7 @@ fun LoginScreen(navController: NavHostController) {
         ) {
             // Google
             OutlinedButton(
-                onClick = {
-                    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                        .requestIdToken(webClientId)
-                        .requestEmail()
-                        .build()
-                    val googleSignInClient = GoogleSignIn.getClient(context, gso)
-                    googleSignInLauncher.launch(googleSignInClient.signInIntent)
-                },
+                onClick = { /* TODO: Google Login */ },
                 modifier = Modifier
                     .weight(1f)
                     .height(52.dp),
