@@ -94,7 +94,7 @@ import androidx.compose.material.icons.filled.Pause
 @Composable
 fun MomoChatScreen(
     navController: NavController,
-    viewModel: MomoChatViewModel = viewModel()
+    viewModel: MomoChatViewModel = viewModel(factory = MomoChatViewModel.factory(LocalContext.current))
 ) {
     val ui by viewModel.uiState.collectAsState()
     val reportTarget = ui.reportTargetMessage

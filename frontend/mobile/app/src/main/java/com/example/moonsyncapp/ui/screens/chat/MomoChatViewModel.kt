@@ -1,22 +1,26 @@
 package com.example.moonsyncapp.ui.screens.chat
 
+import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.moonsyncapp.data.auth.AuthManager
+import com.example.moonsyncapp.data.model.ReportReason
+import com.example.moonsyncapp.util.AudioPlayer
+import com.example.moonsyncapp.util.AudioRecorder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Instant
-import com.example.moonsyncapp.data.model.ReportReason
-import android.content.Context
-import com.example.moonsyncapp.util.AudioRecorder
-import com.example.moonsyncapp.util.AudioPlayer
 
 enum class ChatAuthor { USER, MOMO }
 
@@ -44,7 +48,17 @@ data class ChatUiState(
     val reportTargetMessage: ChatMessage? = null
 )
 
-class MomoChatViewModel : ViewModel() {
+class MomoChatViewModel(private val context: Context) : ViewModel() {
+
+    companion object {
+        fun factory(context: Context): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return MomoChatViewModel(context.applicationContext) as T
+            }
+        }
+    }
+
     private var audioRecorder: AudioRecorder? = null
 
     private val _uiState = MutableStateFlow(
@@ -54,11 +68,6 @@ class MomoChatViewModel : ViewModel() {
                     id = "m1",
                     author = ChatAuthor.MOMO,
                     text = "Hi, I’m Cyra. Ask me anything about your cycle, symptoms, or wellbeing."
-                ),
-                ChatMessage(
-                    id = "m2",
-                    author = ChatAuthor.MOMO,
-                    text = "You can attach a photo or hold the mic to record a voice note."
                 )
             )
         )
@@ -220,41 +229,34 @@ class MomoChatViewModel : ViewModel() {
 
         return withContext(Dispatchers.IO) {
             try {
-                val url = java.net.URL("https://qt3vdzu4nu7ochkh.us-east-1.aws.endpoints.huggingface.cloud")
+                val token = AuthManager(context).currentUser.first()?.token ?: ""
+
+                val url = java.net.URL("https://moonsync-production.up.railway.app/ai/chat")
                 val conn = url.openConnection() as java.net.HttpURLConnection
                 conn.requestMethod = "POST"
                 conn.setRequestProperty("Content-Type", "application/json")
+                conn.setRequestProperty("Authorization", "Bearer $token")
                 conn.doOutput = true
                 conn.connectTimeout = 30000
-                conn.readTimeout = 30000
+                conn.readTimeout = 60000
 
                 val escaped = inputText.replace("\\", "\\\\").replace("\"", "\\\"")
-                val body = """{"inputs":"$escaped"}"""
+                val body = """{"message":"$escaped","session_id":null}"""
                 conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
 
                 val responseCode = conn.responseCode
                 if (responseCode == 200) {
                     val response = conn.inputStream.bufferedReader(Charsets.UTF_8).readText()
-                    parseHuggingFaceResponse(response)
+                    org.json.JSONObject(response).optString("response", "").takeIf { it.isNotBlank() }
                         ?: "I’m here for you. Could you tell me more?"
                 } else {
+                    val errorBody = conn.errorStream?.bufferedReader(Charsets.UTF_8)?.readText() ?: "no error body"
+                    Log.e("MomoChatViewModel", "AI chat failed: HTTP $responseCode — $errorBody")
                     "I’m having trouble connecting right now. Please try again."
                 }
             } catch (e: Exception) {
+                Log.e("MomoChatViewModel", "AI chat exception: ${e.message}", e)
                 "I’m having trouble connecting right now. Please try again."
-            }
-        }
-    }
-
-    private fun parseHuggingFaceResponse(response: String): String? {
-        return try {
-            val arr = org.json.JSONArray(response)
-            arr.getJSONObject(0).optString("generated_text", "").takeIf { it.isNotBlank() }
-        } catch (_: Exception) {
-            try {
-                org.json.JSONObject(response).optString("generated_text", "").takeIf { it.isNotBlank() }
-            } catch (_: Exception) {
-                response.trim().takeIf { it.isNotBlank() && it.length < 2000 }
             }
         }
     }
