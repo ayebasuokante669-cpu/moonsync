@@ -1,16 +1,13 @@
 import os
+import logging
 import requests
 from app.ai.prompt import build_prompt
 from app.ai.mock import mock_response
 from app.ai.safety import safety_check
 
-HF_TOKEN = os.getenv("HF_TOKEN")
+logger = logging.getLogger(__name__)
 
 API_URL = "https://qt3vdzu4nu7ochkh.us-east-1.aws.endpoints.huggingface.cloud"
-
-headers = {
-    "Authorization": f"Bearer {HF_TOKEN}"
-}
 
 
 # ✅ Emoji normalization
@@ -93,10 +90,22 @@ def generate_reply(user_message: str, history=None):
         }
     }
 
+    hf_token = os.getenv("HF_TOKEN")
+    if not hf_token:
+        logger.error("HF_TOKEN env var is not set — cannot call HuggingFace endpoint")
+        return mock_response()
+
+    headers = {"Authorization": f"Bearer {hf_token}"}
+
     try:
         response = requests.post(API_URL, headers=headers, json=payload, timeout=180)
 
         if response.status_code != 200:
+            logger.error(
+                "HuggingFace endpoint returned HTTP %s: %s",
+                response.status_code,
+                response.text[:500]
+            )
             return mock_response()
 
         data = response.json()
@@ -106,6 +115,7 @@ def generate_reply(user_message: str, history=None):
         elif isinstance(data, str):
             text = data
         else:
+            logger.error("Unexpected HuggingFace response shape: %s", str(data)[:200])
             return mock_response()
 
         # ✅ CLEAN OUTPUT
@@ -113,7 +123,7 @@ def generate_reply(user_message: str, history=None):
         answer = answer.split("\nassistant:")[0].strip()
         answer = answer.split("\nUser:")[0].strip()
         answer = answer.replace("\\n", "\n")
-        answer = answer.strip('"').strip()
+        answer = answer.strip(‘"’).strip()
 
         # ✅ LOW CONFIDENCE GUARD
         if len(answer) < 20:
@@ -127,5 +137,6 @@ def generate_reply(user_message: str, history=None):
             "confidence": "medium"
         }
 
-    except Exception:
+    except Exception as e:
+        logger.error("HuggingFace request failed: %s", str(e), exc_info=True)
         return mock_response()

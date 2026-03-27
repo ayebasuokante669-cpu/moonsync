@@ -3,9 +3,7 @@ from app.ai.schemas import ChatRequest, ChatResponse, VoiceInputResponse, VoiceR
 from app.ai.llm_service import generate_reply
 from app.ai.whisper_service import transcribe_audio
 from app.ai.tts_service import text_to_speech
-from app.core.database import get_db
 from app.auth.service import get_current_user
-from app.ai.service import create_session, save_message, get_session_history, get_session_messages, save_feedback
 from fastapi.responses import StreamingResponse
 from app.ai.vision_service import vision_placeholder, extract_image_metadata
 from app.ai.safety import (
@@ -16,50 +14,20 @@ from app.ai.safety import (
     enforce_disclaimer
 )
 import uuid
-import os 
+import os
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(
     request: ChatRequest,
-    db = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-
-    # Step 1: Ensure session exists
     session_id = request.session_id or str(uuid.uuid4())
-
-    if not request.session_id:
-        create_session(db, current_user.id)
-        session_id = create_session(db, current_user.id)
-
-    # Step 2: Save user message
-    save_message(
-        db,
-        session_id,
-        current_user.id,
-        "user",
-        request.message
-    )
-
-    # Step 3: Generate reply
-    history = get_session_history(db, session_id)
-    result = generate_reply(request.message, history)
-    response_text = result["response"]
-
-    # Step 4: Save AI response
-    save_message(
-        db,
-        session_id,
-        current_user.id,
-        "assistant",
-        response_text
-    )
-
+    result = generate_reply(request.message)
     return ChatResponse(
         session_id=session_id,
-        response=response_text,
+        response=result["response"],
         confidence=result.get("confidence", "low")
     )
 
@@ -106,7 +74,7 @@ async def image_upload(file: UploadFile = File(...)):
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="Invalid image file")
     metadata = extract_image_metadata(image_bytes)
-  
+
     return{
         "metadata": metadata,
         "vision": vision_placeholder()
@@ -115,10 +83,8 @@ async def image_upload(file: UploadFile = File(...)):
 @router.post("/safety-chat", response_model=ChatResponse)
 def safety_chat(
     request: ChatRequest,
-    db = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-
     session_id = request.session_id or str(uuid.uuid4())
 
     if detect_high_risk(request.message):
@@ -136,10 +102,6 @@ def safety_chat(
 
         result["response"] = enforce_disclaimer(result["response"])
 
-    # Save both messages
-    save_message(db, session_id, current_user.id, "user", request.message)
-    save_message(db, session_id, current_user.id, "assistant", result["response"])
-
     return ChatResponse(
         session_id=session_id,
         response=result["response"],
@@ -151,19 +113,9 @@ def feedback(
     message_id: str,
     rating: int,
     feedback: str | None = None,
-    db = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    save_feedback(
-        db,
-        current_user.id,
-        message_id,
-        rating,
-        feedback
-    )
-
     return {"message": "Feedback saved"}
 
 def get_session_id(session_id: str | None) -> str:
     return session_id or str(uuid.uuid4())
-
