@@ -12,7 +12,7 @@ from app.core.errors import (
     validation_exception_handler,
     generic_exception_handler,
 )
-from app.ml.safety_layer import handle_prompt
+# from app.ml.safety_layer import handle_prompt
 
 # Routers
 from app.cycle.router import router as cycle_router
@@ -26,6 +26,20 @@ from app.admin.router import router as admin_router
 
 
 app = FastAPI()
+
+#CORS is cross origin resources sharing
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://moonsync-production.up.railway.app",
+        "https://moonsync.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Exception handlers
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
@@ -41,15 +55,6 @@ app.include_router(history_router)
 app.include_router(community_router)
 app.include_router(admin_router)
 app.include_router(api_v1_router)
-
-#CORS is cross origin resources sharing
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Request/Response models
 class ChatRequest(BaseModel):
