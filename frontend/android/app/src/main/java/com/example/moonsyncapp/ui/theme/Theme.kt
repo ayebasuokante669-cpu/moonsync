@@ -109,6 +109,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import com.example.moonsyncapp.ui.theme.tokens.DurationTokens
+import com.example.moonsyncapp.ui.theme.tokens.ElevationTokens
+import com.example.moonsyncapp.ui.theme.tokens.LocalMoonDuration
+import com.example.moonsyncapp.ui.theme.tokens.LocalMoonElevation
+import com.example.moonsyncapp.ui.theme.tokens.LocalMoonRadius
+import com.example.moonsyncapp.ui.theme.tokens.LocalMoonSpacing
+import com.example.moonsyncapp.ui.theme.tokens.RadiusTokens
+import com.example.moonsyncapp.ui.theme.tokens.SpacingTokens
 
 // ============================================
 // Resolved dark theme indicator
@@ -223,7 +231,20 @@ fun MoonSyncTheme(
         }
     }
 
-    CompositionLocalProvider(LocalIsDarkTheme provides darkTheme) {
+    // Light-only token values for now; dark slot is ready when dark
+    // tokens are designed — swap these instances inside the `if (darkTheme)` branch.
+    val spacing  = SpacingTokens()
+    val radius   = RadiusTokens()
+    val elevation = ElevationTokens()
+    val duration  = DurationTokens()
+
+    CompositionLocalProvider(
+        LocalIsDarkTheme     provides darkTheme,
+        LocalMoonSpacing     provides spacing,
+        LocalMoonRadius      provides radius,
+        LocalMoonElevation   provides elevation,
+        LocalMoonDuration    provides duration,
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,
